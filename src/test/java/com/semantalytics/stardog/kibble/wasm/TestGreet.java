@@ -41,7 +41,7 @@ public class TestGreet extends AbstractStardogTest {
         final String aQuery = WasmVocabulary.sparqlPrefix("wasm") +
                 //"select ?result where { bind(wasm:call(<https://github.com/wasmerio/wasmer-java/raw/master/examples/greet.wasm>, \"greet\", \"Stardog\") AS ?result) }";
                 "prefix tricks: <https://github.com/semantalytics/stardog-extensions/blob/wasmer/src/main/resources/> " +
-                " select ?result where { bind(wasm:call(<file:///home/zcw100/sandbox/rust/greet/pkg//woof_bg.wasm>, \"stardog\") AS ?result) }";
+                " select ?result where { bind(wasm:call(<file:///home/zcw100/sandbox/rust/greet/pkg/woof_bg.wasm>, \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -55,5 +55,27 @@ public class TestGreet extends AbstractStardogTest {
             assertThat(aResult).isExhausted();
         }
     }
+
+    @Test
+    public void testFunctionInProjection() {
+
+        final String aQuery = WasmVocabulary.sparqlPrefix("wasm") +
+                //"select ?result where { bind(wasm:call(<https://github.com/wasmerio/wasmer-java/raw/master/examples/greet.wasm>, \"greet\", \"Stardog\") AS ?result) }";
+                " prefix ex: <https://github.com/semantalytics/stardog-wasm/raw/main/wasm/> " +
+                " select (wasm:call(ex:toUpper, ?value) as ?result) where { bind(\"stardog\" AS ?value) } limit 1";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
 
 }

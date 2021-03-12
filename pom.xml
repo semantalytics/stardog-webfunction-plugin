@@ -6,7 +6,7 @@
 
     <groupId>com.semantalytics.stardog</groupId>
     <artifactId>wasm</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.0-rc2</version>
 
     <developers>
         <developer>
@@ -46,21 +46,21 @@
 
     <properties>
         <stardog.major.version>7</stardog.major.version>
-        <stardog.version>${stardog.major.version}.5.0</stardog.version>
+        <stardog.version>${stardog.major.version}.6.0</stardog.version>
         <junit.version>4.12</junit.version>
         <slf4j.version>1.7.21</slf4j.version>
         <jansi.version>1.16</jansi.version>
         <assertj.version>3.15.0</assertj.version>
         <xmlapis.version>1.4.01</xmlapis.version>
         <maven.version>3.3.9</maven.version>
-        <commons-text.version>1.7</commons-text.version>
-        <commons-lang3.version>3.9</commons-lang3.version>
-        <emoji4j.version>5.0</emoji4j.version>
-        <simmetrics-core.version>4.1.1</simmetrics-core.version>
-        <java-sting-similarity.version>0.24</java-sting-similarity.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>30.1-jre</version>
+        </dependency>
         <dependency>
             <groupId>com.complexible.stardog</groupId>
             <artifactId>server</artifactId>
@@ -98,9 +98,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.semantalytics</groupId>
-            <artifactId>wasmer-jni-amd64-linux</artifactId>
-            <version>0.3.0</version>
+            <groupId>org.scijava</groupId>
+            <artifactId>native-lib-loader</artifactId>
+            <version>2.3.5</version>
         </dependency>
     </dependencies>
 
@@ -125,12 +125,12 @@
     </repositories>
 
     <build>
-        <finalName>semantalytics-stardog-${project.artifactId}-${project.version}-sd${stardog.major.version}-amd64-linux</finalName>
+        <finalName>semantalytics-stardog-${project.artifactId}-${project.version}-sd${stardog.major.version}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.5.1</version>
+                <version>3.8.1</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
@@ -141,7 +141,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
-                <version>2.7</version>
+                <version>3.1.0</version>
                 <configuration>
                     <encoding>UTF-8</encoding>
                 </configuration>
@@ -205,7 +205,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.12.4</version>
+                <version>2.22.2</version>
                 <configuration>
                     <argLine>-Djava.library.path=${env.STARDOG}/lib</argLine>
                     <excludes>
@@ -216,32 +216,6 @@
                     </includes>
                 </configuration>
             </plugin>
-            <!--
-            <plugin>
-                <groupId>com.github.wvengen</groupId>
-                <artifactId>proguard-maven-plugin</artifactId>
-                <version>2.2.0</version>
-                <executions>
-                   <execution>
-                       <phase>package</phase>
-                       <goals><goal>proguard</goal></goals>
-                   </execution>
-                </executions>
-                <configuration>
-                    <options>
-                        <option>-allowaccessmodification</option>
-                        <option>-keep public class * extends com.complexible.stardog.plan.filter.functions.AbstractFunction { *; }</option>
-                    </options>
-                    <outjar>${project.build.finalName}.jar</outjar>
-                    <outjar>${project.build.finalName}-small.jar</outjar>
-                    <proguardInclude>${basedir}/proguard.conf</proguardInclude>
-                    <libs>
-                        <lib>${java.home}/lib/rt.jar</lib>
-                        <lib>${java.home}/lib/jsse.jar</lib>
-                    </libs>
-                </configuration>
-            </plugin>
-            -->
         </plugins>
     </build>
 </project>

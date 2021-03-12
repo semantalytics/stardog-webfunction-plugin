@@ -128,23 +128,27 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
 
                 final Optional<BindingSet> bs = selectQueryResult.stream().findFirst();
 
-                if (bs.isPresent()) {
-                    if (bs.get().size() > 1) {
-                        final MappingDictionary mappingDictionary = valueSolution.getDictionary();
-                        final long[] ids = bs.get().stream().map(b -> b.get()).mapToLong(v -> mappingDictionary.add(v)).toArray();
-                        return ValueOrError.General.of(new ArrayLiteral(ids));
-                    } else if (bs.get().size() == 1) {
-                        final Optional<Binding> firstVar = bs.get().stream().findFirst();
-                        if (firstVar.isPresent()) {
-                            return ValueOrError.General.of(firstVar.get().value());
+                try {
+                    if (bs.isPresent()) {
+                        if (bs.get().size() > 1) {
+                            final MappingDictionary mappingDictionary = valueSolution.getDictionary();
+                            final long[] ids = bs.get().stream().map(b -> b.get()).mapToLong(v -> mappingDictionary.add(v)).toArray();
+                            return ValueOrError.General.of(new ArrayLiteral(ids));
+                        } else if (bs.get().size() == 1) {
+                            final Optional<Binding> firstVar = bs.get().stream().findFirst();
+                            if (firstVar.isPresent()) {
+                                return ValueOrError.General.of(firstVar.get().value());
+                            } else {
+                                return ValueOrError.Error;
+                            }
                         } else {
                             return ValueOrError.Error;
                         }
                     } else {
                         return ValueOrError.Error;
                     }
-                } else {
-                    return ValueOrError.Error;
+                } finally {
+                    instance.exports.getFunction("deallocate").apply(input_pointer, byteArrayOutputStream.toByteArray().length);
                 }
             } else {
                 return ValueOrError.Error;
