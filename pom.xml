@@ -58,8 +58,8 @@
     <dependencies>
         <dependency>
             <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>30.1-jre</version>
+            <artifactId>failureaccess</artifactId>
+            <version>1.0.1</version>
         </dependency>
         <dependency>
             <groupId>com.complexible.stardog</groupId>
@@ -152,16 +152,6 @@
                 <version>3.2.1</version>
                 <configuration>
                     <minimizeJar/>
-                    <relocations>
-                        <relocation>
-                            <pattern>org.apache.commons.lang3</pattern>
-                            <shadedPattern>shaded.org.apache.commons.lang3</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.apache.commons.text</pattern>
-                            <shadedPattern>shaded.org.apache.commons.text</shadedPattern>
-                        </relocation>
-                    </relocations>
                     <filters>
                         <filter>
                             <artifact>*:*</artifact>
