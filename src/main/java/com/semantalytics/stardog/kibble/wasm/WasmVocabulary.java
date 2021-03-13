@@ -9,6 +9,7 @@ public class WasmVocabulary {
 	public static final String NS = "http://semantalytics.com/2021/03/ns/stardog/kibble/wasm/";
 
 	public static final IRI call = iri(NS + "call");
+    public static final IRI doc = iri(NS + "doc");
 
     public static String sparqlPrefix(final String prefixName) {
         return "PREFIX " + prefixName + ": <" + NS + "> ";
