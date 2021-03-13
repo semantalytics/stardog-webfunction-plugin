@@ -6,7 +6,7 @@
 
     <groupId>com.semantalytics.stardog</groupId>
     <artifactId>wasm</artifactId>
-    <version>1.0.0-rc2</version>
+    <version>1.0.0-rc3</version>
 
     <developers>
         <developer>
