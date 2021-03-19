@@ -19,9 +19,8 @@ import com.stardog.stark.query.impl.SelectQueryResultImpl;
 import com.stardog.stark.query.io.QueryResultFormats;
 import com.stardog.stark.query.io.QueryResultParsers;
 import com.stardog.stark.query.io.QueryResultWriters;
+import io.github.kawamuray.wasmtime.*;
 import org.apache.commons.io.IOUtils;
-import org.wasmer.Instance;
-import org.wasmer.Memory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -31,9 +30,9 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.*;
@@ -48,23 +47,6 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
     function versioning? This would be helped with ipfs
     do I need to handle expanding memory????
      */
-    private RemovalListener<URL, Instance> removalListener = new RemovalListener<URL, Instance>() {
-        @Override
-        public void onRemoval(RemovalNotification<URL, Instance> removal) {
-            Instance instance = removal.getValue();
-            instance.close();
-        }
-    };
-
-    private LoadingCache<URL, Instance> instanceCache = CacheBuilder.newBuilder()
-                                                                .softValues()
-                                                                .removalListener(removalListener)
-                                                                .build(new CacheLoader<URL, Instance>() {
-        @Override
-        public Instance load(URL url) throws IOException {
-            return new Instance(getWasm(url));
-        }
-    });
 
     public Call() {
         super(new Expression[0]);
@@ -76,11 +58,10 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
 
     @Override
     public ValueOrError evaluate(final ValueSolution valueSolution) {
-        if(getArgs().size() > 0) {
+        if (getArgs().size() > 0) {
             final ValueOrError[] valueOrErrors = getArgs().stream().map(e -> e.evaluate(valueSolution)).toArray(ValueOrError[]::new);
             if (Arrays.stream(valueOrErrors).noneMatch(ValueOrError::isError)) {
                 final Value[] values = Arrays.stream(valueOrErrors).map(ValueOrError::value).toArray(Value[]::new);
-                final URL wasmUrl;
 
                 final List<String> vars = Lists.newArrayListWithCapacity(values.length);
                 List<BindingSet> bindings = IntStream.range(0, values.length).mapToObj(i -> {
@@ -96,59 +77,64 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
                     return ValueOrError.Error;
                 }
 
+                final URL wasmUrl;
+
                 try {
                     wasmUrl = new URL(values[0].toString());
                 } catch (MalformedURLException e) {
                     return ValueOrError.Error;
                 }
 
-                final Instance instance;
+                try (Store store = new Store();
+                     Linker linker = new Linker(store);
+                     Engine engine = store.engine();
+                     Module module = Module.fromBinary(engine, getWasm(wasmUrl))) {
 
-                try {
-                    instance = instanceCache.get(wasmUrl);
-                } catch (ExecutionException e) {
-                    return ValueOrError.Error;
-                }
+                    Collection<Extern> imports = Arrays.asList();
+                    try (Instance instance = new Instance(store, module, imports)) {
+                        Integer input_pointer = instance.getFunc("allocate").get().call(Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
 
-                Integer input_pointer = (Integer) instance.exports.getFunction("allocate").apply(byteArrayOutputStream.toByteArray().length)[0];
+                        Memory memory = instance.getMemory("memory").get();
+                        ByteBuffer memoryBuffer = memory.buffer();
+                        memoryBuffer.position(input_pointer);
+                        memoryBuffer.put(byteArrayOutputStream.toByteArray());
 
-                Memory memory = instance.exports.getMemory("memory");
-                ByteBuffer memoryBuffer = memory.buffer();
-                memoryBuffer.position(input_pointer);
-                memoryBuffer.put(byteArrayOutputStream.toByteArray());
+                        final Integer output_pointer = instance.getFunc("internalEvaluate").get().call(Val.fromI32(input_pointer))[0].i32();
 
-                final Integer output_pointer = (Integer) instance.exports.getFunction("internalEvaluate").apply(input_pointer)[0];
+                        final SelectQueryResult selectQueryResult;
+                        try {
+                            selectQueryResult = QueryResultParsers.readSelect(new ByteArrayInputStream(readResult(memory, output_pointer).toByteArray()), QueryResultFormats.JSON);
+                        } catch (IOException e) {
+                            return ValueOrError.Error;
+                        }
 
-                final SelectQueryResult selectQueryResult;
-                try {
-                    selectQueryResult = QueryResultParsers.readSelect(new ByteArrayInputStream(readResult(memory, output_pointer).toByteArray()), QueryResultFormats.JSON);
-                } catch (IOException e) {
-                    return ValueOrError.Error;
-                }
+                        final Optional<BindingSet> bs = selectQueryResult.stream().findFirst();
 
-                final Optional<BindingSet> bs = selectQueryResult.stream().findFirst();
-
-                try {
-                    if (bs.isPresent()) {
-                        if (bs.get().size() > 1) {
-                            final MappingDictionary mappingDictionary = valueSolution.getDictionary();
-                            final long[] ids = bs.get().stream().map(b -> b.get()).mapToLong(v -> mappingDictionary.add(v)).toArray();
-                            return ValueOrError.General.of(new ArrayLiteral(ids));
-                        } else if (bs.get().size() == 1) {
-                            final Optional<Binding> firstVar = bs.get().stream().findFirst();
-                            if (firstVar.isPresent()) {
-                                return ValueOrError.General.of(firstVar.get().value());
+                        try {
+                            if (bs.isPresent()) {
+                                if (bs.get().size() > 1) {
+                                    final MappingDictionary mappingDictionary = valueSolution.getDictionary();
+                                    final long[] ids = bs.get().stream().map(b -> b.get()).mapToLong(v -> mappingDictionary.add(v)).toArray();
+                                    return ValueOrError.General.of(new ArrayLiteral(ids));
+                                } else if (bs.get().size() == 1) {
+                                    final Optional<Binding> firstVar = bs.get().stream().findFirst();
+                                    if (firstVar.isPresent()) {
+                                        return ValueOrError.General.of(firstVar.get().value());
+                                    } else {
+                                        return ValueOrError.Error;
+                                    }
+                                } else {
+                                    return ValueOrError.Error;
+                                }
                             } else {
                                 return ValueOrError.Error;
                             }
-                        } else {
-                            return ValueOrError.Error;
+                        } finally {
+                            instance.getFunc("deallocate").get().call(Val.fromI32(input_pointer), Val.fromI32(byteArrayOutputStream.toByteArray().length));
                         }
-                    } else {
-                        return ValueOrError.Error;
                     }
-                } finally {
-                    instance.exports.getFunction("deallocate").apply(input_pointer, byteArrayOutputStream.toByteArray().length);
+                } catch (IOException e) {
+                    return ValueOrError.Error;
                 }
             } else {
                 return ValueOrError.Error;

@@ -1,4 +1,4 @@
-package com.semantalytics.stardog.kibble.wasm;
+//package com.semantalytics.stardog.kibble.wasm;
 
 import com.complexible.common.rdf.model.ArrayLiteral;
 import com.complexible.stardog.index.dictionary.MappingDictionary;
@@ -22,8 +22,6 @@ import com.stardog.stark.query.io.QueryResultFormats;
 import com.stardog.stark.query.io.QueryResultParsers;
 import com.stardog.stark.query.io.QueryResultWriters;
 import org.apache.commons.io.IOUtils;
-import org.wasmer.Instance;
-import org.wasmer.Memory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -40,7 +38,7 @@ import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 
-public class Doc extends AbstractExpression implements UserDefinedFunction {
+//public class Doc extends AbstractExpression implements UserDefinedFunction {
 
     /* NOTES
     function to get docs wasm:doc?
@@ -50,6 +48,7 @@ public class Doc extends AbstractExpression implements UserDefinedFunction {
     function versioning? This would be helped with ipfs
     do I need to handle expanding memory????
      */
+    /*
     private RemovalListener<URL, Instance> removalListener = new RemovalListener<URL, Instance>() {
         @Override
         public void onRemoval(RemovalNotification<URL, Instance> removal) {
@@ -163,4 +162,6 @@ public class Doc extends AbstractExpression implements UserDefinedFunction {
     public void accept(final ExpressionVisitor expressionVisitor) {
         expressionVisitor.visit(this);
     }
-}
+
+     */
+//}

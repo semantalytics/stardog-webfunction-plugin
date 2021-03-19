@@ -78,4 +78,25 @@ public class TestGreet extends AbstractStardogTest {
     }
 
 
+    @Test
+    public void testLinker() {
+
+        final String aQuery = WasmVocabulary.sparqlPrefix("wasm") +
+                //"select ?result where { bind(wasm:call(<https://github.com/wasmerio/wasmer-java/raw/master/examples/greet.wasm>, \"greet\", \"Stardog\") AS ?result) }";
+                " select (wasm:call(<file:///home/zcw100/sandbox/rust/to_upper_wo_mem/target/wasm32-unknown-unknown/release/to_upper_wo_mem.wasm>, ?value) as ?result) where { bind(\"stardog\" AS ?value) } limit 1";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+
 }
