@@ -96,8 +96,13 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
 
                         Memory memory = instance.getMemory("memory").get();
                         ByteBuffer memoryBuffer = memory.buffer();
+                        byte[] input = byteArrayOutputStream.toByteArray();
+                        int pages = (int)Math.ceil(input.length / 64.0);
+                        if(pages > memory.size()) {
+                            memory.grow(pages - memory.size());
+                        }
                         memoryBuffer.position(input_pointer);
-                        memoryBuffer.put(byteArrayOutputStream.toByteArray());
+                        memoryBuffer.put(input);
 
                         final Integer output_pointer = instance.getFunc("internalEvaluate").get().call(Val.fromI32(input_pointer))[0].i32();
 
