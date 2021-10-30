@@ -2,6 +2,7 @@ use std::ffi::{CStr, CString};
 use std::mem;
 use std::os::raw::{c_char, c_void};
 use serde_json::{Value, json};
+use eddie::Levenshtein;
 
 #[no_mangle]
 pub extern fn allocate(size: usize) -> *mut c_void {
@@ -20,12 +21,30 @@ pub extern fn deallocate(pointer: *mut c_void, capacity: usize) {
 }
 
 #[no_mangle]
+pub extern fn doc() -> *mut c_char {
+
+	let output = b"
+Compute the Levenshtein distance between two strings.
+
+arguemnts:
+    value[0]:literal first string to compare
+    value[1]:literal second string to compare
+	
+	".to_vec();
+	
+	unsafe { CString::from_vec_unchecked(output) }.into_raw()
+}
+
+#[no_mangle]
 pub extern fn internalEvaluate(subject: *mut c_char) -> *mut c_char {
     let subject = unsafe { CStr::from_ptr(subject).to_str().unwrap() };
     
     let mut output = b"".to_vec();
     let v: Value = serde_json::from_str(subject).unwrap();
-    let result = v["results"]["bindings"][1]["value[1]"]["value"].as_str().unwrap().to_uppercase();
+    let label1 = v["results"]["bindings"][1]["value[1]"]["value"].as_str().unwrap();
+    let label2 = v["results"]["bindings"][2]["value[2]"]["value"].as_str().unwrap();
+    let lev = Levenshtein::new();
+    let result = lev.distance(label1, label2);
     output.extend(json!({
       "head": {"vars":["result"]}, "results":{"bindings":[{"result":{"type":"literal","value": result}}]}
     }).to_string().bytes());

@@ -41,7 +41,8 @@ public class TestGreet extends AbstractStardogTest {
         final String aQuery = WasmVocabulary.sparqlPrefix("wasm") +
                 //"select ?result where { bind(wasm:call(<https://github.com/wasmerio/wasmer-java/raw/master/examples/greet.wasm>, \"greet\", \"Stardog\") AS ?result) }";
                 "prefix tricks: <https://github.com/semantalytics/stardog-extensions/blob/wasmer/src/main/resources/> " +
-                " select ?result where { bind(wasm:call(<file:///home/zcw100/sandbox/rust/greet/pkg/woof_bg.wasm>, \"stardog\") AS ?result) }";
+        //        " select ?result where { bind(wasm:call(<file:///home/zcw100/sandbox/rust/greet/pkg/woof_bg.wasm>, \"stardog\") AS ?result) }";
+        " select ?result where { bind(wasm:call(<file:///tmp/to_upper>, \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 

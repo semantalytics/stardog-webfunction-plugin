@@ -11,6 +11,7 @@ import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
 import com.google.common.cache.*;
 import com.google.common.collect.Lists;
 import com.stardog.stark.Value;
+import com.stardog.stark.Values;
 import com.stardog.stark.query.Binding;
 import com.stardog.stark.query.BindingSet;
 import com.stardog.stark.query.BindingSets;
@@ -20,6 +21,8 @@ import com.stardog.stark.query.io.QueryResultFormats;
 import com.stardog.stark.query.io.QueryResultParsers;
 import com.stardog.stark.query.io.QueryResultWriters;
 import io.github.kawamuray.wasmtime.*;
+import io.ipfs.cid.Cid;
+import io.ipfs.multihash.Multihash;
 import org.apache.commons.io.IOUtils;
 
 import java.io.ByteArrayInputStream;
@@ -29,17 +32,19 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
+import static io.github.kawamuray.wasmtime.WasmValType.I32;
+import static io.github.kawamuray.wasmtime.WasmValType.I64;
 import static java.util.stream.Collectors.*;
 
 public class Call extends AbstractExpression implements UserDefinedFunction {
 
     /* NOTES
+    function to list functions?
     function to get docs wasm:doc?
     support ipfs:// functions
     caching wasm?
@@ -47,6 +52,8 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
     function versioning? This would be helped with ipfs
     do I need to handle expanding memory????
      */
+
+    private static final long versionID = 1L;
 
     public Call() {
         super(new Expression[0]);
@@ -69,6 +76,8 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
                     return BindingSets.builder().add(vars.get(i), values[i]).build();
                 }).collect(toList());
 
+                //I screwd this up. I need to be adding multiple bindings to the binding set not multiple binding sets
+
                 final SelectQueryResult queryResult = new SelectQueryResultImpl(vars, bindings);
                 final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                 try {
@@ -80,7 +89,7 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
                 final URL wasmUrl;
 
                 try {
-                    wasmUrl = new URL(values[0].toString());
+                    wasmUrl = new URL(values[0].toString() + '/' + versionID);
                 } catch (MalformedURLException e) {
                     return ValueOrError.Error;
                 }
@@ -89,12 +98,37 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
                      Linker linker = new Linker(store);
                      Engine engine = store.engine();
                      Module module = Module.fromBinary(engine, getWasm(wasmUrl))) {
+                    AtomicReference<Memory> memRef = new AtomicReference<>();
 
-                    Collection<Extern> imports = Arrays.asList();
+
+                  //I'm almost positive I screwed something up here but it should be close. It gets really confusing which direction
+                  //things are going
+
+                    Func mappingDictionaryGet = WasmFunctions.wrap(store, I64, I32, I32, I64, (id, bufAddr, bufLen) -> {
+
+                        ByteBuffer buf = memRef.get().buffer();
+                        buf.position(bufAddr);
+                        final Value value = valueSolution.getDictionary().getValue(id);
+                        buf.put(value.toString().getBytes(StandardCharsets.UTF_8));
+                        return null;
+                    });
+
+                    Func mappingDictionaryAdd = WasmFunctions.wrap(store, I32, I32, I64, (bufAddr, bufLen) -> {
+                        ByteBuffer buf = memRef.get().buffer();
+                        char[] value = new char[bufLen];
+                        buf.asCharBuffer().get(value, bufAddr, bufLen);
+                        long myid = valueSolution.getDictionary().add(Values.resource(value.toString()));
+
+                        return Val.fromI64(myid).i64();
+                    });
+
+                    Collection<Extern> imports = Arrays.asList(Extern.fromFunc(mappingDictionaryGet), Extern.fromFunc(mappingDictionaryAdd));
+
                     try (Instance instance = new Instance(store, module, imports)) {
-                        Integer input_pointer = instance.getFunc("allocate").get().call(Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
+                        Integer input_pointer = instance.getFunc("malloc").get().call(Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
 
                         Memory memory = instance.getMemory("memory").get();
+                        memRef.set(memory);
                         ByteBuffer memoryBuffer = memory.buffer();
                         byte[] input = byteArrayOutputStream.toByteArray();
                         int pages = (int)Math.ceil(input.length / 64.0);
@@ -104,7 +138,7 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
                         memoryBuffer.position(input_pointer);
                         memoryBuffer.put(input);
 
-                        final Integer output_pointer = instance.getFunc("internalEvaluate").get().call(Val.fromI32(input_pointer))[0].i32();
+                        final Integer output_pointer = instance.getFunc("evaluate").get().call(Val.fromI32(input_pointer))[0].i32();
 
                         final SelectQueryResult selectQueryResult;
                         try {
@@ -135,7 +169,7 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
                                 return ValueOrError.Error;
                             }
                         } finally {
-                            instance.getFunc("deallocate").get().call(Val.fromI32(input_pointer), Val.fromI32(byteArrayOutputStream.toByteArray().length));
+                            instance.getFunc("free").get().call(Val.fromI32(input_pointer), Val.fromI32(byteArrayOutputStream.toByteArray().length));
                         }
                     }
                 } catch (IOException e) {
