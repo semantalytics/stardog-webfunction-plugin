@@ -49,13 +49,17 @@
         <stardog.version>${stardog.major.version}.7.2</stardog.version>
         <junit.version>4.12</junit.version>
         <slf4j.version>1.7.21</slf4j.version>
-        <jansi.version>1.16</jansi.version>
         <assertj.version>3.15.0</assertj.version>
         <xmlapis.version>1.4.01</xmlapis.version>
         <maven.version>3.3.9</maven.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.caoccao.javet</groupId>
+            <artifactId>javet</artifactId>
+            <version>1.0.2</version>
+        </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>failureaccess</artifactId>
@@ -102,20 +106,33 @@
             <artifactId>java-cid</artifactId>
             <version>1.3.1</version>
         </dependency>
+        <dependency>
+            <groupId>com.semantalytics</groupId>
+            <artifactId>wasmtime-java</artifactId>
+            <version>0.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.12.0</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.11.0</version>
+        </dependency>
     </dependencies>
 
     <repositories>
-
+        <repository>
+            <id>local-maven-repo</id>
+            <url>file:///${project.basedir}/local-maven-repo</url>
+        </repository>
         <repository>
             <id>stardog-maven-repo</id>
             <name>Stardog Maven Repo</name>
             <url>https://maven.stardog.com</url>
         </repository>
-        <repository>
-            <id>local-maven-repo</id>
-            <url>file:///${project.basedir}/local-maven-repo</url>
-        </repository>
-
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
