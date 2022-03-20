@@ -1,4 +1,4 @@
-package semantalytics.ipfs;
+package com.semantalytics.ipfs;
 
 import org.apache.commons.io.IOUtils;
 
