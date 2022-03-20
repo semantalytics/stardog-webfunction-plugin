@@ -1,4 +1,4 @@
-package com.semantalytics.stardog.kibble.wasm;
+package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.complexible.common.rdf.model.ArrayLiteral;
 import com.complexible.stardog.plan.filter.AbstractExpression;

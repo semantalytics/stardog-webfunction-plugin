@@ -1,16 +1,11 @@
-package com.semantalytics.stardog.kibble.wasm;
+package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.complexible.stardog.plan.filter.ExpressionVisitor;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.AbstractFunction;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
 import com.google.common.collect.Range;
-import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
-import com.stardog.stark.Values;
-
-import java.net.MalformedURLException;
-import java.net.URL;
 
 import static com.stardog.stark.Values.*;
 

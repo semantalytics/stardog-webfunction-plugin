@@ -1,9 +1,9 @@
-com.semantalytics.stardog.kibble.wasm.Call
-com.semantalytics.stardog.kibble.wasm.Doc
-com.semantalytics.stardog.kibble.wasm.CacheClear
-com.semantalytics.stardog.kibble.wasm.CacheLoad
-com.semantalytics.stardog.kibble.wasm.CacheRefresh
-com.semantalytics.stardog.kibble.wasm.CacheList
-com.semantalytics.stardog.kibble.wasm.PluginVersion
+com.semantalytics.stardog.kibble.webfunctions.Call
+com.semantalytics.stardog.kibble.webfunctions.Doc
+com.semantalytics.stardog.kibble.webfunctions.CacheClear
+com.semantalytics.stardog.kibble.webfunctions.CacheLoad
+com.semantalytics.stardog.kibble.webfunctions.CacheRefresh
+com.semantalytics.stardog.kibble.webfunctions.CacheList
+com.semantalytics.stardog.kibble.webfunctions.PluginVersion
 
 

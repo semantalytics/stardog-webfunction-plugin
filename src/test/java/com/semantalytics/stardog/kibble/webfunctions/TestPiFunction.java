@@ -1,4 +1,4 @@
-package com.semantalytics.stardog.kibble.wasm;
+package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.semantalytics.stardog.kibble.AbstractStardogTest;
 import com.stardog.stark.Literal;
@@ -10,15 +10,16 @@ import java.util.Optional;
 
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertStringLiteral;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
-public class TestLevenshteinFunction extends AbstractStardogTest {
+public class TestPiFunction extends AbstractStardogTest {
 
     @Test
-    public void testLevenshtein() {
+    public void testPi() {
 
-        final String aQuery = WasmVocabulary.sparqlPrefix("wasm") +
-                "prefix tricks: <https://github.com/semantalytics/stardog-extensions/blob/wasmer/src/main/resources/> " +
-                " select ?result where { bind(wasm:call(<file:////home/zcw100/git/stardog-wasm/rust/levenshtein/target/wasm32-unknown-unknown/release>, \"kitten\", \"sitting\") AS ?result) }";
+        final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
+                " prefix f: <file:rust/pi/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where { bind(wf:call(f:pi) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -28,7 +29,7 @@ public class TestLevenshteinFunction extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(Literal.intValue(aLiteral)).isEqualTo(3);
+            assertThat(Literal.floatValue(aLiteral)).isEqualTo(3.1415926535f, within(0.00001f));
             assertThat(aResult).isExhausted();
         }
     }

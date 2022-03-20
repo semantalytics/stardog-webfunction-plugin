@@ -1,4 +1,4 @@
-package com.semantalytics.stardog.kibble.wasm;
+package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.complexible.stardog.plan.filter.ExpressionVisitor;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
@@ -11,20 +11,20 @@ import com.stardog.stark.Value;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-public class CacheClear extends AbstractFunction implements UserDefinedFunction {
+public class CacheRefresh extends AbstractFunction implements UserDefinedFunction {
 
-    public CacheClear() {
-        super(Range.all(), WasmVocabulary.cacheClear.toString());
+    public CacheRefresh() {
+        super(Range.all(), WasmVocabulary.cacheRefresh.toString());
     }
 
-    public CacheClear(final CacheClear cacheClear) {
-        super(cacheClear);
+    public CacheRefresh(final CacheRefresh clearCache) {
+        super(clearCache);
     }
 
     @Override
     protected ValueOrError internalEvaluate(final Value... values) {
         if(values.length == 0) {
-            Call.loadingCache.invalidateAll();
+            Call.loadingCache.asMap().keySet().stream().forEach(Call.loadingCache::refresh);
         } else {
             for (Value value : values) {
                 try {
@@ -36,7 +36,7 @@ public class CacheClear extends AbstractFunction implements UserDefinedFunction 
                     } else {
                         wasmUrl = null;
                     }
-                    Call.loadingCache.invalidate(wasmUrl);
+                    Call.loadingCache.refresh(wasmUrl);
                 } catch (MalformedURLException e) {
                     return ValueOrError.Error;
                 }
@@ -45,10 +45,9 @@ public class CacheClear extends AbstractFunction implements UserDefinedFunction 
         return ValueOrError.General.of(null);
     }
 
-
     @Override
-    public CacheClear copy() {
-        return new CacheClear(this);
+    public CacheRefresh copy() {
+        return new CacheRefresh(this);
     }
 
     @Override

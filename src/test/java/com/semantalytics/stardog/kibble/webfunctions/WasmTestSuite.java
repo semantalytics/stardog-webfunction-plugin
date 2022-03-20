@@ -9,7 +9,7 @@ import com.complexible.stardog.api.Connection;
 import com.complexible.stardog.api.admin.AdminConnection;
 import com.complexible.stardog.api.admin.AdminConnectionConfiguration;
 import com.google.common.io.Files;
-import com.semantalytics.stardog.kibble.wasm.*;
+import com.semantalytics.stardog.kibble.webfunctions.*;
 import junit.framework.TestCase;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;

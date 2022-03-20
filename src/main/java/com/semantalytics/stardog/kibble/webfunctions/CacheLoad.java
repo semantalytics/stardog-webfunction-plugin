@@ -1,4 +1,4 @@
-package com.semantalytics.stardog.kibble.wasm;
+package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.complexible.stardog.plan.filter.ExpressionVisitor;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;

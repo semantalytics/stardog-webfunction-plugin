@@ -1,4 +1,4 @@
-package com.semantalytics.stardog.kibble.wasm;
+package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.semantalytics.stardog.kibble.AbstractStardogTest;
 import com.stardog.stark.Literal;
@@ -11,13 +11,13 @@ import java.util.Optional;
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertStringLiteral;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestToUpper extends AbstractStardogTest {
+public class TestIpfs extends AbstractStardogTest {
 
     @Test
     public void testToUpper() {
 
         final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
-                "prefix f: <file:rust/toupper/target/wasm32-unknown-unknown/release/> " +
+                "prefix f: <ipfs://QmVx8jryTscgnbJoh8iuUYUiiGBeu4tr1i1A3PmCqcE5Vk/> " +
                 " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {

@@ -1,4 +1,4 @@
-package com.semantalytics.stardog.kibble.wasm;
+package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.semantalytics.stardog.kibble.AbstractStardogTest;
 import com.stardog.stark.Literal;
@@ -11,13 +11,14 @@ import java.util.Optional;
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertStringLiteral;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestPluginVersion extends AbstractStardogTest {
+public class TestDoc extends AbstractStardogTest {
 
     @Test
-    public void testPluginVersion() {
+    public void testDoc() {
 
         final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
-                " select ?result where { bind(wf:pluginVersion() AS ?result) }";
+                "prefix f: <file:rust/doc-test/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where { bind(wf:doc(f:doc) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -26,8 +27,8 @@ public class TestPluginVersion extends AbstractStardogTest {
             assertThat(aPossibleValue).isPresent();
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
-            final Literal aLiteral = ((Literal) aValue);
-            assertThat(Literal.intValue(aLiteral)).isEqualTo(Call.pluginVersion());
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("This is documentation blah, blah, blah");
             assertThat(aResult).isExhausted();
         }
     }

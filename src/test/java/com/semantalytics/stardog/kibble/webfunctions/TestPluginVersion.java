@@ -1,4 +1,4 @@
-package com.semantalytics.stardog.kibble.wasm;
+package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.semantalytics.stardog.kibble.AbstractStardogTest;
 import com.stardog.stark.Literal;
@@ -11,14 +11,13 @@ import java.util.Optional;
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertStringLiteral;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestIpfs extends AbstractStardogTest {
+public class TestPluginVersion extends AbstractStardogTest {
 
     @Test
-    public void testToUpper() {
+    public void testPluginVersion() {
 
         final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
-                "prefix f: <ipfs://QmVx8jryTscgnbJoh8iuUYUiiGBeu4tr1i1A3PmCqcE5Vk/> " +
-                " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
+                " select ?result where { bind(wf:pluginVersion() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -27,8 +26,8 @@ public class TestIpfs extends AbstractStardogTest {
             assertThat(aPossibleValue).isPresent();
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
-            final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            final Literal aLiteral = ((Literal) aValue);
+            assertThat(Literal.intValue(aLiteral)).isEqualTo(Call.pluginVersion());
             assertThat(aResult).isExhausted();
         }
     }

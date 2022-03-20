@@ -1,4 +1,4 @@
-package com.semantalytics.stardog.kibble.wasm;
+package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.complexible.common.base.Pair;
 import com.complexible.common.rdf.model.ArrayLiteral;
@@ -8,21 +8,30 @@ import com.complexible.stardog.plan.filter.ExpressionVisitor;
 import com.complexible.stardog.plan.filter.ValueSolution;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
-import com.stardog.stark.*;
-import com.stardog.stark.query.*;
+import com.stardog.stark.Literal;
+import com.stardog.stark.Value;
+import com.stardog.stark.query.Binding;
+import com.stardog.stark.query.BindingSet;
+import com.stardog.stark.query.BindingSets;
+import com.stardog.stark.query.SelectQueryResult;
 import com.stardog.stark.query.impl.SelectQueryResultImpl;
 import com.stardog.stark.query.io.QueryResultFormats;
 import com.stardog.stark.query.io.QueryResultParsers;
 import com.stardog.stark.query.io.QueryResultWriters;
-import io.github.kawamuray.wasmtime.*;
+import io.github.kawamuray.wasmtime.Module;
+import io.github.kawamuray.wasmtime.Store;
+import io.github.kawamuray.wasmtime.Instance;
+import io.github.kawamuray.wasmtime.Func;
+import io.github.kawamuray.wasmtime.Val;
+import io.github.kawamuray.wasmtime.Engine;
+import io.github.kawamuray.wasmtime.WasmFunctions;
+import io.github.kawamuray.wasmtime.Linker;
+import io.github.kawamuray.wasmtime.Extern;
+import io.github.kawamuray.wasmtime.Memory;
 import io.github.kawamuray.wasmtime.wasi.WasiCtx;
 import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -31,31 +40,24 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
-import static com.stardog.stark.Values.*;
+import static com.stardog.stark.Values.iri;
 import static io.github.kawamuray.wasmtime.WasmValType.I32;
 import static io.github.kawamuray.wasmtime.WasmValType.I64;
-import static org.apache.commons.lang3.StringUtils.*;
+import static org.apache.commons.lang3.StringUtils.substringBetween;
 
-public class Call extends AbstractExpression implements UserDefinedFunction {
+public class Doc extends AbstractExpression implements UserDefinedFunction {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Call.class);
-
-    static LoadingCache<URL, byte[]> loadingCache = CacheBuilder.newBuilder().softValues().build(
-        new CacheLoader<URL, byte[]>() {
-            @Override
-            public byte[] load(URL url) throws IOException {
-                return getWasm(url);
-            }
-        });
-
+    static LoadingCache<URL, byte[]> loadingCache = Call.loadingCache;
 
     private Store<Void> store = Store.withoutData();
-    private Module module;
+    private io.github.kawamuray.wasmtime.Module module;
 
     private static final int pluginVersion = 1;
 
@@ -65,19 +67,17 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
         module = null;
     }
 
-    public Call() {
+    public Doc() {
         super(new Expression[0]);
     }
 
-    public Call(final Call call) {
+    public Doc(final Doc call) {
         super(call);
     }
 
     @Override
     public ValueOrError evaluate(final ValueSolution valueSolution) {
-        if (getArgs().size() >= 1) {
-            //shit  java.lang.ClassCastException: com.complexible.stardog.plan.filter.expr.ConstantImpl cannot be cast to com.complexible.stardog.plan.filter.expr.Variable
-
+        if (getArgs().size() == 1) {
             final ValueOrError[] valueOrErrors = getArgs().stream().map(e -> e.evaluate(valueSolution)).toArray(ValueOrError[]::new);
             if (Arrays.stream(valueOrErrors).noneMatch(ValueOrError::isError)) {
                 final Value[] values = Arrays.stream(valueOrErrors).map(ValueOrError::value).toArray(Value[]::new);
@@ -87,25 +87,18 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
                     try(Instance instance = initWasm(loadingCache.get(wasmUrl), valueSolution)) {
 
                         int input;
-                        try {
-                            AtomicReference<Instance> instanceRef = new AtomicReference<>();
-                            instanceRef.set(instance);
-                            Pair input_pointer = writeToWasmMemory(instanceRef, "memory", values);
-                            input = writeToWasmMemory(instanceRef, "memory", values).first.intValue();
-                            free(instanceRef, input_pointer);
+                        AtomicReference<Instance> instanceRef = new AtomicReference<>();
+                        instanceRef.set(instance);
 
-                            try (Func evaluateFunction = instance.getFunc(store, "evaluate").get()) {
-                                final Integer output_pointer = evaluateFunction.call(store, Val.fromI32(input))[0].i32();
-                                final Value output_value = readFromWasmMemory(instanceRef, "memory", output_pointer)[0];
-                                if(output_value instanceof Literal && ((Literal)output_value).datatypeIRI().equals(iri("tag:stardog:api:array"))) {
-                                    long[] arrayLiteralValues = Arrays.stream(substringBetween(((Literal) output_value).label(), "[", "]").split(",")).mapToLong(Long::valueOf).toArray();
-                                    return ValueOrError.General.of(new ArrayLiteral(arrayLiteralValues));
-                                } else {
-                                    return ValueOrError.General.of(output_value);
-                                }
+                        try (Func evaluateFunction = instance.getFunc(store, "doc").get()) {
+                            final Integer output_pointer = evaluateFunction.call(store)[0].i32();
+                            final Value output_value = readFromWasmMemory(instanceRef, "memory", output_pointer)[0];
+                            if(output_value instanceof Literal && ((Literal)output_value).datatypeIRI().equals(iri("tag:stardog:api:array"))) {
+                                long[] arrayLiteralValues = Arrays.stream(substringBetween(((Literal) output_value).label(), "[", "]").split(",")).mapToLong(Long::valueOf).toArray();
+                                return ValueOrError.General.of(new ArrayLiteral(arrayLiteralValues));
+                            } else {
+                                return ValueOrError.General.of(output_value);
                             }
-                        } catch (IOException e) {
-                            return ValueOrError.Error;
                         }
                     }
                 } catch (MalformedURLException | ExecutionException e) {
@@ -132,7 +125,7 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
                 Pair<Integer, Integer> buf = null;
                 //TODO fix this. possible NPE
                 try {
-                    buf = writeToWasmMemory(instanceRef, "memory", new Value[] {value});
+                    buf = writeToWasmMemory(instanceRef, "memory", Lists.newArrayList(value).toArray(new Value[1]));
                 } catch (IOException e) {
                     //TODO ???
                 }
@@ -143,9 +136,12 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
             Func mappingDictionaryAddFunc = WasmFunctions.wrap(store, I32, I64, (addr) ->
                     valueSolution.getDictionary().add(readFromWasmMemory(instanceRef, "memory", addr.intValue())[0]));
 
+            Func pluginVersionFunc = WasmFunctions.wrap(store, I32, () -> pluginVersion());
+
             try (Linker linker = new Linker(engine)) {
                 linker.define("env", "mappingDictionaryAdd", Extern.fromFunc(mappingDictionaryAddFunc));
                 linker.define("env", "mappingDictionaryGet", Extern.fromFunc(mappingDictionaryGetFunc));
+                linker.define("env", "pluginVersion", Extern.fromFunc(pluginVersionFunc));
                 linker.module(store, "", module);
 
                 WasiCtx.addToLinker(linker);
@@ -244,13 +240,13 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
         return baos;
     }
 
-    public static int pluginVersion() {
+    public int pluginVersion() {
         return pluginVersion;
     }
 
     @Override
     public String getName() {
-        return WasmVocabulary.call.toString();
+        return WasmVocabulary.doc.toString();
     }
 
     @Override
@@ -259,8 +255,8 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
     }
 
     @Override
-    public Call copy() {
-        return new Call(this);
+    public Doc copy() {
+        return new Doc(this);
     }
 
     @Override
