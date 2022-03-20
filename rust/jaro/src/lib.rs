@@ -40,11 +40,13 @@ pub extern fn internalEvaluate(subject: *mut c_char) -> *mut c_char {
     let subject = unsafe { CStr::from_ptr(subject).to_str().unwrap() };
     
     let mut output = b"".to_vec();
-    let v: Value = serde_json::from_str(subject).unwrap();
-    let label1 = v["results"]["bindings"][1]["value[1]"]["value"].as_str().unwrap();
-    let label2 = v["results"]["bindings"][2]["value[2]"]["value"].as_str().unwrap();
-    let lev = Levenshtein::new();
-    let result = lev.distance(label1, label2);
+    let values: Value = serde_json::from_str(subject).unwrap();
+
+    let label1 = values["results"]["bindings"][1]["value_1"]["value"].as_str().unwrap();
+    let label2 = values["results"]["bindings"][2]["value_2"]["value"].as_str().unwrap();
+
+    let jaro = Jaro::new();
+    let result = jaro.distance(label1, label2);
     output.extend(json!({
       "head": {"vars":["result"]}, "results":{"bindings":[{"result":{"type":"literal","value": result}}]}
     }).to_string().bytes());
