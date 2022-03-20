@@ -9,7 +9,7 @@ import com.complexible.stardog.api.Connection;
 import com.complexible.stardog.api.admin.AdminConnection;
 import com.complexible.stardog.api.admin.AdminConnectionConfiguration;
 import com.google.common.io.Files;
-import com.semantalytics.stardog.kibble.wasm.TestCall;
+import com.semantalytics.stardog.kibble.wasm.*;
 import junit.framework.TestCase;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -23,7 +23,13 @@ import java.net.InetSocketAddress;
 
 @RunWith(Suite.class)
 @SuiteClasses({
+    TestCache.class,
     TestCall.class,
+    TestDoc.class,
+    TestLevenshteinFunction.class,
+    TestPiFunction.class,
+    TestToUpper.class,
+    TestPluginVersion.class,
 })
 
 public class WasmTestSuite extends TestCase {

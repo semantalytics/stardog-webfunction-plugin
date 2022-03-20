@@ -3,7 +3,6 @@ package com.semantalytics.stardog.kibble.wasm;
 import com.semantalytics.stardog.kibble.AbstractStardogTest;
 import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
-import com.stardog.stark.query.BindingSet;
 import com.stardog.stark.query.SelectQueryResult;
 import org.junit.Test;
 
@@ -14,25 +13,84 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestCall extends AbstractStardogTest {
 
-
     @Test
-    public void test() {
-    
-        final String aQuery = WasmVocabulary.sparqlPrefix("wasm") +
-        //            "select ?result where { bind(wasm:call(<https://github.com/wasmerio/wasmer-java/raw/master/tests/resources/simple.wasm>, \"sum\", 5, 7) AS ?result) }";
-        "select ?result where { bind(wasm:call(tricks:woof.wasm, \"sum\", 5, 7) AS ?result) }";
+    public void testToUpper() {
+
+        final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
+            "prefix f: <file:rust/toupper/target/wasm32-unknown-unknown/release/> " +
+            " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
-                assertThat(aResult).hasNext();
-                final Optional<Value> aPossibleValue = aResult.next().value("result");
-                assertThat(aPossibleValue).isPresent();
-                final Value aValue = aPossibleValue.get();
-                assertThat(assertStringLiteral(aValue));
-                final Literal aLiteral = ((Literal)aValue);
-                assertThat(Literal.intValue(aLiteral)).isEqualTo(12);
-                assertThat(aResult).isExhausted();
-            }
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aResult).isExhausted();
+        }
     }
+
+    @Test
+    public void testDictionaryMapperAdd() {
+
+        final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
+                "prefix f: <file:rust/test-mapping-dictionary-add/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where { unnest(wf:call(f:testMappingDictionaryAdd, \"stardog\") AS ?result) }";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
+    public void testDictionaryMapperGet() {
+
+        final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
+                "prefix f: <file:rust/test-mapping-dictionary-get/target/wasm32-unknown-unknown/release/> " +
+                "select (wf:call(f:testMappingDictionaryGet, set(?a)) AS ?result) WHERE { values ?a {\"stardog\"} }";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    public void testDictionaryMapperGetConstant() {
+
+        final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
+                "prefix f: <file:rust/test-mapping-dictionary-get/target/wasm32-unknown-unknown/release/> " +
+                "select (wf:call(f:testMappingDictionaryGet, ?al) AS ?result) WHERE { bind(set(\"stardog\") as ?al) }";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
 
 }

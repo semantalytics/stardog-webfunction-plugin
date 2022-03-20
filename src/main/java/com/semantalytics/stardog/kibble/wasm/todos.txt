@@ -1,0 +1,22 @@
+tests, tests, tests
+publish Rust template, make sure to include mapping functions
+change git repo name to stardog-webfunctions
+make git repo public
+might want to check different versions of java
+test ipfs
+demo functions
+
+Abstract to common baseclase from Doc and Call. This might be difficult because of the complexities of working
+    with wasmtime and memory management
+Install wasi shim for http calls?? (later)
+performance???? check against built in function
+functions to dereference ipfs to get CID??? (later, they can just use ipfs client if they're acually using ipfs)
+test expanding memory, run a function on a larger and larger string
+move malloc/free to separate module??? Not sure how to do this with wasm without copying it over and over
+
+file:// http:// ipfs:// shoudl all work
+
+how to build and deploy new functions
+
+default web page for wf.semantalytics.com gateway
+enable tls on gateway

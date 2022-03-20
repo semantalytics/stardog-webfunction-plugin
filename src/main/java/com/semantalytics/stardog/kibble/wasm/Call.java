@@ -1,29 +1,28 @@
 package com.semantalytics.stardog.kibble.wasm;
 
+import com.complexible.common.base.Pair;
 import com.complexible.common.rdf.model.ArrayLiteral;
-import com.complexible.stardog.index.dictionary.MappingDictionary;
 import com.complexible.stardog.plan.filter.AbstractExpression;
 import com.complexible.stardog.plan.filter.Expression;
 import com.complexible.stardog.plan.filter.ExpressionVisitor;
 import com.complexible.stardog.plan.filter.ValueSolution;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
-import com.google.common.cache.*;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
-import com.stardog.stark.Value;
-import com.stardog.stark.Values;
-import com.stardog.stark.query.Binding;
-import com.stardog.stark.query.BindingSet;
-import com.stardog.stark.query.BindingSets;
-import com.stardog.stark.query.SelectQueryResult;
+import com.stardog.stark.*;
+import com.stardog.stark.query.*;
 import com.stardog.stark.query.impl.SelectQueryResultImpl;
 import com.stardog.stark.query.io.QueryResultFormats;
 import com.stardog.stark.query.io.QueryResultParsers;
 import com.stardog.stark.query.io.QueryResultWriters;
 import io.github.kawamuray.wasmtime.*;
-import io.ipfs.cid.Cid;
-import io.ipfs.multihash.Multihash;
+import io.github.kawamuray.wasmtime.wasi.WasiCtx;
 import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -32,28 +31,39 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
+import static com.stardog.stark.Values.*;
 import static io.github.kawamuray.wasmtime.WasmValType.I32;
 import static io.github.kawamuray.wasmtime.WasmValType.I64;
-import static java.util.stream.Collectors.*;
+import static org.apache.commons.lang3.StringUtils.*;
 
 public class Call extends AbstractExpression implements UserDefinedFunction {
 
-    /* NOTES
-    function to list functions?
-    function to get docs wasm:doc?
-    support ipfs:// functions
-    caching wasm?
-    how to force a reload?
-    function versioning? This would be helped with ipfs
-    do I need to handle expanding memory????
-     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(Call.class);
 
-    private static final long versionID = 1L;
+    static LoadingCache<URL, byte[]> loadingCache = CacheBuilder.newBuilder().softValues().build(
+        new CacheLoader<URL, byte[]>() {
+            @Override
+            public byte[] load(URL url) throws IOException {
+                return getWasm(url);
+            }
+        });
+
+
+    private Store<Void> store = Store.withoutData();
+    private Module module;
+
+    private static final int pluginVersion = 1;
+
+    @Override
+    public void initialize() {
+        store = Store.withoutData();
+        module = null;
+    }
 
     public Call() {
         super(new Expression[0]);
@@ -65,114 +75,40 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
 
     @Override
     public ValueOrError evaluate(final ValueSolution valueSolution) {
-        if (getArgs().size() > 0) {
+        if (getArgs().size() >= 1) {
+            //shit  java.lang.ClassCastException: com.complexible.stardog.plan.filter.expr.ConstantImpl cannot be cast to com.complexible.stardog.plan.filter.expr.Variable
+
             final ValueOrError[] valueOrErrors = getArgs().stream().map(e -> e.evaluate(valueSolution)).toArray(ValueOrError[]::new);
             if (Arrays.stream(valueOrErrors).noneMatch(ValueOrError::isError)) {
                 final Value[] values = Arrays.stream(valueOrErrors).map(ValueOrError::value).toArray(Value[]::new);
 
-                final List<String> vars = Lists.newArrayListWithCapacity(values.length);
-                List<BindingSet> bindings = IntStream.range(0, values.length).mapToObj(i -> {
-                    vars.add(String.format("value[%d]", i));
-                    return BindingSets.builder().add(vars.get(i), values[i]).build();
-                }).collect(toList());
-
-                //I screwd this up. I need to be adding multiple bindings to the binding set not multiple binding sets
-
-                final SelectQueryResult queryResult = new SelectQueryResultImpl(vars, bindings);
-                final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                 try {
-                    QueryResultWriters.write(queryResult, byteArrayOutputStream, QueryResultFormats.JSON);
-                } catch (IOException e) {
-                    return ValueOrError.Error;
-                }
+                    final URL wasmUrl = new URL(values[0].toString() + '/' + pluginVersion);
+                    try(Instance instance = initWasm(loadingCache.get(wasmUrl), valueSolution)) {
 
-                final URL wasmUrl;
-
-                try {
-                    wasmUrl = new URL(values[0].toString() + '/' + versionID);
-                } catch (MalformedURLException e) {
-                    return ValueOrError.Error;
-                }
-
-                try (Store store = new Store();
-                     Linker linker = new Linker(store);
-                     Engine engine = store.engine();
-                     Module module = Module.fromBinary(engine, getWasm(wasmUrl))) {
-                    AtomicReference<Memory> memRef = new AtomicReference<>();
-
-
-                  //I'm almost positive I screwed something up here but it should be close. It gets really confusing which direction
-                  //things are going
-
-                    Func mappingDictionaryGet = WasmFunctions.wrap(store, I64, I32, I32, I64, (id, bufAddr, bufLen) -> {
-
-                        ByteBuffer buf = memRef.get().buffer();
-                        buf.position(bufAddr);
-                        final Value value = valueSolution.getDictionary().getValue(id);
-                        buf.put(value.toString().getBytes(StandardCharsets.UTF_8));
-                        return null;
-                    });
-
-                    Func mappingDictionaryAdd = WasmFunctions.wrap(store, I32, I32, I64, (bufAddr, bufLen) -> {
-                        ByteBuffer buf = memRef.get().buffer();
-                        char[] value = new char[bufLen];
-                        buf.asCharBuffer().get(value, bufAddr, bufLen);
-                        long myid = valueSolution.getDictionary().add(Values.resource(value.toString()));
-
-                        return Val.fromI64(myid).i64();
-                    });
-
-                    Collection<Extern> imports = Arrays.asList(Extern.fromFunc(mappingDictionaryGet), Extern.fromFunc(mappingDictionaryAdd));
-
-                    try (Instance instance = new Instance(store, module, imports)) {
-                        Integer input_pointer = instance.getFunc("malloc").get().call(Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
-
-                        Memory memory = instance.getMemory("memory").get();
-                        memRef.set(memory);
-                        ByteBuffer memoryBuffer = memory.buffer();
-                        byte[] input = byteArrayOutputStream.toByteArray();
-                        int pages = (int)Math.ceil(input.length / 64.0);
-                        if(pages > memory.size()) {
-                            memory.grow(pages - memory.size());
-                        }
-                        memoryBuffer.position(input_pointer);
-                        memoryBuffer.put(input);
-
-                        final Integer output_pointer = instance.getFunc("evaluate").get().call(Val.fromI32(input_pointer))[0].i32();
-
-                        final SelectQueryResult selectQueryResult;
+                        int input;
                         try {
-                            selectQueryResult = QueryResultParsers.readSelect(new ByteArrayInputStream(readResult(memory, output_pointer).toByteArray()), QueryResultFormats.JSON);
+                            AtomicReference<Instance> instanceRef = new AtomicReference<>();
+                            instanceRef.set(instance);
+                            Pair input_pointer = writeToWasmMemory(instanceRef, "memory", values);
+                            input = writeToWasmMemory(instanceRef, "memory", values).first.intValue();
+                            free(instanceRef, input_pointer);
+
+                            try (Func evaluateFunction = instance.getFunc(store, "evaluate").get()) {
+                                final Integer output_pointer = evaluateFunction.call(store, Val.fromI32(input))[0].i32();
+                                final Value output_value = readFromWasmMemory(instanceRef, "memory", output_pointer)[0];
+                                if(output_value instanceof Literal && ((Literal)output_value).datatypeIRI().equals(iri("tag:stardog:api:array"))) {
+                                    long[] arrayLiteralValues = Arrays.stream(substringBetween(((Literal) output_value).label(), "[", "]").split(",")).mapToLong(Long::valueOf).toArray();
+                                    return ValueOrError.General.of(new ArrayLiteral(arrayLiteralValues));
+                                } else {
+                                    return ValueOrError.General.of(output_value);
+                                }
+                            }
                         } catch (IOException e) {
                             return ValueOrError.Error;
                         }
-
-                        final Optional<BindingSet> bs = selectQueryResult.stream().findFirst();
-
-                        try {
-                            if (bs.isPresent()) {
-                                if (bs.get().size() > 1) {
-                                    final MappingDictionary mappingDictionary = valueSolution.getDictionary();
-                                    final long[] ids = bs.get().stream().map(b -> b.get()).mapToLong(v -> mappingDictionary.add(v)).toArray();
-                                    return ValueOrError.General.of(new ArrayLiteral(ids));
-                                } else if (bs.get().size() == 1) {
-                                    final Optional<Binding> firstVar = bs.get().stream().findFirst();
-                                    if (firstVar.isPresent()) {
-                                        return ValueOrError.General.of(firstVar.get().value());
-                                    } else {
-                                        return ValueOrError.Error;
-                                    }
-                                } else {
-                                    return ValueOrError.Error;
-                                }
-                            } else {
-                                return ValueOrError.Error;
-                            }
-                        } finally {
-                            instance.getFunc("free").get().call(Val.fromI32(input_pointer), Val.fromI32(byteArrayOutputStream.toByteArray().length));
-                        }
                     }
-                } catch (IOException e) {
+                } catch (MalformedURLException | ExecutionException e) {
                     return ValueOrError.Error;
                 }
             } else {
@@ -183,7 +119,102 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
         }
     }
 
-    private byte[] getWasm(final URL wasmUrl) throws IOException {
+    private Instance initWasm(byte[] wasmBytes, ValueSolution valueSolution) {
+        AtomicReference<Instance> instanceRef = new AtomicReference<>();
+        try(Engine engine = store.engine()) {
+            if(module == null) {
+                module = Module.fromBinary(engine, wasmBytes);
+            }
+
+            Func mappingDictionaryGetFunc = WasmFunctions.wrap(store, I64, I32, (id) -> {
+                final Value value = valueSolution.getDictionary().getValue(id.longValue());
+
+                Pair<Integer, Integer> buf = null;
+                //TODO fix this. possible NPE
+                try {
+                    buf = writeToWasmMemory(instanceRef, "memory", new Value[] {value});
+                } catch (IOException e) {
+                    //TODO ???
+                }
+
+                return buf.first;
+            });
+
+            Func mappingDictionaryAddFunc = WasmFunctions.wrap(store, I32, I64, (addr) ->
+                    valueSolution.getDictionary().add(readFromWasmMemory(instanceRef, "memory", addr.intValue())[0]));
+
+            try (Linker linker = new Linker(engine)) {
+                linker.define("env", "mappingDictionaryAdd", Extern.fromFunc(mappingDictionaryAddFunc));
+                linker.define("env", "mappingDictionaryGet", Extern.fromFunc(mappingDictionaryGetFunc));
+                linker.module(store, "", module);
+
+                WasiCtx.addToLinker(linker);
+                instanceRef.set(linker.instantiate(store, module));
+            }
+        }
+        return instanceRef.get();
+    }
+
+    private Pair<Integer, Integer> writeToWasmMemory(AtomicReference<Instance> instanceRef, String name, Value[] values) throws IOException {
+
+        final List<String> vars = Lists.newArrayListWithCapacity(values.length);
+        BindingSets.Builder bindingSetsBuilder = BindingSets.builder();
+        IntStream.range(0, values.length).forEach(i -> {
+            vars.add(String.format("value_%d", i));
+            bindingSetsBuilder.add(vars.get(i), values[i]);
+        });
+        List<BindingSet> bindings = Arrays.asList(bindingSetsBuilder.build());
+
+        final SelectQueryResult queryResult = new SelectQueryResultImpl(vars, bindings);
+        final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+        QueryResultWriters.write(queryResult, byteArrayOutputStream, QueryResultFormats.JSON);
+
+        Integer input_pointer;
+        try (Func mallocFunction = instanceRef.get().getFunc(store, "malloc").get();) {
+            byteArrayOutputStream.write('\0');
+            mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
+            input_pointer = mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
+        }
+
+        try(Memory memory = instanceRef.get().getMemory(store, name).get()) {
+            ByteBuffer memoryBuffer = memory.buffer(store);
+            byte[] input = byteArrayOutputStream.toByteArray();
+            int pages = (int) Math.ceil(input.length / 64.0);
+            if (pages > memory.size(store)) {
+                memory.grow(store, pages - memory.size(store));
+            }
+
+            memoryBuffer.position(input_pointer);
+            memoryBuffer.put(input);
+        }
+        return Pair.create(input_pointer,byteArrayOutputStream.toByteArray().length);
+    }
+
+    private Value[] readFromWasmMemory(AtomicReference<Instance> instanceRef, String name, int output_pointer) {
+        try (Memory memory = instanceRef.get().getMemory(store, name).get()) {
+            try {
+                SelectQueryResult selectQueryResult = QueryResultParsers.readSelect(new ByteArrayInputStream(readResult(store, memory, output_pointer).toByteArray()), QueryResultFormats.JSON);
+                final Optional<BindingSet> bs = selectQueryResult.stream().findFirst();
+
+                if (bs.isPresent()) {
+                    return bs.get().stream().map(Binding::value).toArray(Value[]::new);
+                } else {
+                    return new Value[0];
+                }
+            } catch (IOException e) {
+                return new Value[0];
+            }
+        }
+    }
+
+    private void free(AtomicReference<Instance> instanceRef, Pair<Integer, Integer> pointer) {
+        try (Func freeFunction = instanceRef.get().getFunc(store, "free").get();) {
+            freeFunction.call(store, Val.fromI32(pointer.first), Val.fromI32(pointer.second));
+        }
+    }
+
+    private static byte[] getWasm(final URL wasmUrl) throws IOException {
         final ByteArrayOutputStream baos;
 
         URLConnection conn = wasmUrl.openConnection();
@@ -196,10 +227,9 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
         return baos.toByteArray();
     }
 
-    private ByteArrayOutputStream readResult(final Memory memory, final Integer output_pointer) {
+    private ByteArrayOutputStream readResult(final Store store, final Memory memory, final Integer output_pointer) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        StringBuilder output = new StringBuilder();
-        ByteBuffer memoryBuffer = memory.buffer();
+        ByteBuffer memoryBuffer = memory.buffer(store);
 
         for (Integer i = output_pointer, max = memoryBuffer.limit(); i < max; ++i) {
             final byte[] b = new byte[1];
@@ -210,11 +240,12 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
                 break;
             }
             baos.write(b[0]);
-
-            output.appendCodePoint(b[0]);
         }
-
         return baos;
+    }
+
+    public static int pluginVersion() {
+        return pluginVersion;
     }
 
     @Override

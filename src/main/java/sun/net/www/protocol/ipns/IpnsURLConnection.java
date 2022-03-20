@@ -21,7 +21,7 @@ public class IpnsURLConnection extends URLConnection {
     }
 
     private static URL toIpfsGatewayUrl(final URL url) throws MalformedURLException {
-        return new URL(appendIfMissing(getenv("IPFS_GATEWAY"), "/") + "/ipns/" + url.getAuthority() + "/" + url.getPath());
+        return new URL(appendIfMissing(System.getenv().getOrDefault("STARDOG_IPNS_GATEWAY", "https://gateway.ipfs.io/ipns/"), "/") + url.getAuthority() + url.getPath());
     }
     
     @Override

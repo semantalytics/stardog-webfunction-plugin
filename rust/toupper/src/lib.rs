@@ -19,22 +19,14 @@ pub extern fn free(pointer: *mut c_void, capacity: usize) {
     }
 }
 
-extern {
-	pub fn mappingDictionaryGet(id: i64, buf_addr: i32, buf_len: i32) -> i64; 
-	pub fn mappingDictionaryAdd(buf_addr: i32, buf_len: i32) -> i64;
-}
-
 #[no_mangle]
 pub extern fn evaluate(subject: *mut c_char) -> *mut c_char {
     let subject = unsafe { CStr::from_ptr(subject).to_str().unwrap() };
 
-     unsafe { mappingDictionaryGet(0 , 0, 0) };
-     unsafe { mappingDictionaryAdd(subject, s) };
-    
-
     let mut output = b"".to_vec();
     let v: Value = serde_json::from_str(subject).unwrap();
-    let result = v["results"]["bindings"][1]["value[1]"]["value"].as_str().unwrap().to_uppercase();
+    let result = v["results"]["bindings"][0]["value_1"]["value"].as_str().unwrap().to_uppercase();
+
     output.extend(json!({
       "head": {"vars":["result"]}, "results":{"bindings":[{"result":{"type":"literal","value": result}}]}
     }).to_string().bytes());

@@ -1,5 +1,7 @@
 package sun.net.www.protocol.ipfs;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -26,7 +28,7 @@ public class IpfsURLConnection extends URLConnection {
     }
 
     private static URL toIpfsGatewayUrl(final URL url) throws MalformedURLException {
-        return new URL(appendIfMissing(System.getProperty("ipfs.gateway", "https://gateway.ipfs.io/"), "/") + "ipfs/" + url.getAuthority() + url.getPath());
+        return new URL(appendIfMissing(System.getenv().getOrDefault("STARDOG_IPFS_GATEWAY", "https://gateway.ipfs.io/ipfs/"), "/") + url.getAuthority() + url.getPath());
     }
 
     @Override
