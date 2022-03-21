@@ -4,7 +4,8 @@
 
 A [Stardog](http://stardog.com) plugin for executing web assembly functions
 
-```prefix wf: <http://semantalytics.com/2021/03/ns/stardog/webfunction/>
+```
+prefix wf: <http://semantalytics.com/2021/03/ns/stardog/webfunction/>
 prefix f: <ipfs://QmVx8jryTscgnbJoh8iuUYUiiGBeu4tr1i1A3PmCqcE5Vk/>
 
 select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
