@@ -29,19 +29,16 @@ extern {
 
 #[no_mangle]
 pub extern fn evaluate(subject: *mut c_char) -> *mut c_char {
-    let subject = unsafe { CStr::from_ptr(subject).to_str().unwrap() };
+    let arg = unsafe { CStr::from_ptr(subject).to_str().unwrap() };
 
-    let values: Value = serde_json::from_str(subject).unwrap();
-    let value_1 = values["results"]["bindings"][0]["value_1"]["value"].as_str().unwrap();
+    let values_json: Value = serde_json::from_str(arg).unwrap();
+    let value_1 = values_json["results"]["bindings"][0]["value_1"]["value"].as_str().unwrap();
 
-    let mut output = b"".to_vec();
+    let result = json!({
+      "head": {"vars":["result"]}, "results":{"bindings":[{"result":{"type":"literal","value": value_1}}]}
+    }).to_string().into_bytes();
 
-    output.extend(json!({
-      "head": {"vars":["result"]}, "results":{"bindings":[{"result":{"type":"literal","value": result}}]}
-    }).to_string().bytes());
-
-    unsafe { CString::from_vec_unchecked(output) }.into_raw()
-
+    unsafe { CString::from_vec_unchecked(result) }.into_raw()
 }
 
 #[no_mangle]
