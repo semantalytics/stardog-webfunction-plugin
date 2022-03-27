@@ -15,7 +15,7 @@ import java.util.concurrent.ExecutionException;
 public class CacheLoad extends AbstractFunction implements UserDefinedFunction {
 
     public CacheLoad() {
-        super(Range.all(), WasmVocabulary.cacheLoad.toString());
+        super(Range.all(), WebFunctionVocabulary.cacheLoad.toString());
     }
 
     public CacheLoad(final CacheLoad clearCache) {
@@ -34,7 +34,7 @@ public class CacheLoad extends AbstractFunction implements UserDefinedFunction {
                } else {
                     wasmUrl = null;
                 }
-               Call.loadingCache.get(wasmUrl);
+               StardogWasm.loadingCache.get(wasmUrl);
             } catch (ExecutionException | MalformedURLException e) {
                 return ValueOrError.Error;
             }

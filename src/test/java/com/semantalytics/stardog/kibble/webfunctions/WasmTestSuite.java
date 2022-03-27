@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
     TestPiFunction.class,
     TestToUpper.class,
     TestPluginVersion.class,
+    TestSum.class,
 })
 
 public class WasmTestSuite extends TestCase {

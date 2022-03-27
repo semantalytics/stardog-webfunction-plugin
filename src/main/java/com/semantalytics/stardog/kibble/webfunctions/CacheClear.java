@@ -14,7 +14,7 @@ import java.net.URL;
 public class CacheClear extends AbstractFunction implements UserDefinedFunction {
 
     public CacheClear() {
-        super(Range.all(), WasmVocabulary.cacheClear.toString());
+        super(Range.all(), WebFunctionVocabulary.cacheClear.toString());
     }
 
     public CacheClear(final CacheClear cacheClear) {
@@ -24,7 +24,7 @@ public class CacheClear extends AbstractFunction implements UserDefinedFunction 
     @Override
     protected ValueOrError internalEvaluate(final Value... values) {
         if(values.length == 0) {
-            Call.loadingCache.invalidateAll();
+            StardogWasm.loadingCache.invalidateAll();
         } else {
             for (Value value : values) {
                 try {
@@ -36,7 +36,7 @@ public class CacheClear extends AbstractFunction implements UserDefinedFunction 
                     } else {
                         wasmUrl = null;
                     }
-                    Call.loadingCache.invalidate(wasmUrl);
+                    StardogWasm.loadingCache.invalidate(wasmUrl);
                 } catch (MalformedURLException e) {
                     return ValueOrError.Error;
                 }

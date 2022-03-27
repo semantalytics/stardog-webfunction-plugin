@@ -16,9 +16,28 @@ public class TestToUpper extends AbstractStardogTest {
     @Test
     public void testToUpper() {
 
-        final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
                 "prefix f: <file:rust/toupper/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
+    public void testLiteralUrl() {
+
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+                " select ?result where { bind(wf:call(\"file:rust/toupper/target/wasm32-unknown-unknown/release/to_upper.wasm\", \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 

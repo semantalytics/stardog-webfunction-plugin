@@ -16,7 +16,7 @@ public class TestCall extends AbstractStardogTest {
     @Test
     public void testToUpper() {
 
-        final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
             "prefix f: <file:rust/toupper/target/wasm32-unknown-unknown/release/> " +
             " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
 
@@ -36,7 +36,7 @@ public class TestCall extends AbstractStardogTest {
     @Test
     public void testDictionaryMapperAdd() {
 
-        final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
                 "prefix f: <file:rust/test-mapping-dictionary-add/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { unnest(wf:call(f:testMappingDictionaryAdd, \"stardog\") AS ?result) }";
 
@@ -56,7 +56,7 @@ public class TestCall extends AbstractStardogTest {
     @Test
     public void testDictionaryMapperGet() {
 
-        final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
                 "prefix f: <file:rust/test-mapping-dictionary-get/target/wasm32-unknown-unknown/release/> " +
                 "select (wf:call(f:testMappingDictionaryGet, set(?a)) AS ?result) WHERE { values ?a {\"stardog\"} }";
 
@@ -75,7 +75,7 @@ public class TestCall extends AbstractStardogTest {
 
     public void testDictionaryMapperGetConstant() {
 
-        final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
                 "prefix f: <file:rust/test-mapping-dictionary-get/target/wasm32-unknown-unknown/release/> " +
                 "select (wf:call(f:testMappingDictionaryGet, ?al) AS ?result) WHERE { bind(set(\"stardog\") as ?al) }";
 

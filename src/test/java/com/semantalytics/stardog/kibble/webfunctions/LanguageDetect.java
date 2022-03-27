@@ -11,14 +11,14 @@ import java.util.Optional;
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertStringLiteral;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestDoc extends AbstractStardogTest {
+public class LanguageDetect extends AbstractStardogTest {
 
     @Test
-    public void testDoc() {
+    public void testLanguageDetect() {
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
-                "prefix f: <file:rust/doc-test/target/wasm32-unknown-unknown/release/> " +
-                " select ?result where { bind(wf:doc(f:doc) AS ?result) }";
+                "prefix f: <file:rust/lingua/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where { bind(wf:call(f:languageDetect, \"what language do you think this is?\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -28,7 +28,7 @@ public class TestDoc extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("This is documentation blah, blah, blah");
+            assertThat(aLiteral.label()).isEqualTo("STARDOG");
             assertThat(aResult).isExhausted();
         }
     }

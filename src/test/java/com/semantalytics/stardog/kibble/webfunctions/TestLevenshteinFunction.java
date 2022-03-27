@@ -16,7 +16,7 @@ public class TestLevenshteinFunction extends AbstractStardogTest {
     @Test
     public void testLevenshtein() {
 
-        final String aQuery = WasmVocabulary.sparqlPrefix("wasm") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wasm") +
                 "prefix tricks: <https://github.com/semantalytics/stardog-extensions/blob/wasmer/src/main/resources/> " +
                 " select ?result where { bind(wasm:call(<file:////home/zcw100/git/stardog-wasm/rust/levenshtein/target/wasm32-unknown-unknown/release>, \"kitten\", \"sitting\") AS ?result) }";
 

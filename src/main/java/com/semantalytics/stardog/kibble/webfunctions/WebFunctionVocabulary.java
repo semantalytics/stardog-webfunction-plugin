@@ -4,7 +4,7 @@ import com.stardog.stark.IRI;
 
 import static com.stardog.stark.Values.iri;
 
-public class WasmVocabulary {
+public class WebFunctionVocabulary {
 
 	public static final String NS = "http://semantalytics.com/2021/03/ns/stardog/webfunction/";
 

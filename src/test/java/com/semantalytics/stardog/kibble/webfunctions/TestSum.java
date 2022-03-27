@@ -11,14 +11,13 @@ import java.util.Optional;
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertStringLiteral;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestDoc extends AbstractStardogTest {
+public class TestSum extends AbstractStardogTest {
 
     @Test
-    public void testDoc() {
+    public void testSum() {
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
-                "prefix f: <file:rust/doc-test/target/wasm32-unknown-unknown/release/> " +
-                " select ?result where { bind(wf:doc(f:doc) AS ?result) }";
+        " select (wf:agg(\"file:rust/sum/target/wasm32-unknown-unknown/release/sum.wasm\", ?a) AS ?result)  WHERE { VALUES ?a { 1 2 3 1}} ";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -28,8 +27,9 @@ public class TestDoc extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("This is documentation blah, blah, blah");
+            assertThat(Literal.longValue(aLiteral)).isEqualTo(7);
             assertThat(aResult).isExhausted();
         }
     }
+
 }

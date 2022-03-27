@@ -16,7 +16,7 @@ public class TestPluginVersion extends AbstractStardogTest {
     @Test
     public void testPluginVersion() {
 
-        final String aQuery = WasmVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
                 " select ?result where { bind(wf:pluginVersion() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {

@@ -26,7 +26,7 @@ public class CacheList extends AbstractExpression implements UserDefinedFunction
     @Override
     public ValueOrError evaluate(final ValueSolution valueSolution) {
         if (getArgs().isEmpty()) {
-            return Call.loadingCache
+            return StardogWasm.loadingCache
                     .asMap()
                     .keySet()
                     .stream()
@@ -54,7 +54,7 @@ public class CacheList extends AbstractExpression implements UserDefinedFunction
 
     @Override
     public String getName() {
-        return WasmVocabulary.cacheList.toString();
+        return WebFunctionVocabulary.cacheList.toString();
     }
 
     @Override
