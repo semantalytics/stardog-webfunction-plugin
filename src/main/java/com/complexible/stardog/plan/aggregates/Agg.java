@@ -117,8 +117,10 @@ public class Agg extends AbstractAggregate implements UserDefinedFunction {
                 return ValueOrError.General.of(output_value);
             }
         } finally {
-            instance.close();
-            instance = null;
+            if(instance != null) {
+                instance.close();
+                instance = null;
+            }
         }
     }
 
