@@ -1,8 +1,10 @@
 [package]
-name = "{{project-name}}"
+name = "stardog_function_template"
 version = "1.0.0"
-authors = ["{{authors}}"]
+authors = [""]
 edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 crate-type = ["cdylib"]
@@ -10,6 +12,9 @@ crate-type = ["cdylib"]
 [dependencies]
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0.59" }
+
+[build]
+target = "wasm32-unknown-unknown"
 
 [profile.release]
 debug = false

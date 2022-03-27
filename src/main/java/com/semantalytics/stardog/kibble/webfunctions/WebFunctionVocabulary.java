@@ -15,6 +15,7 @@ public class WasmVocabulary {
     public static final IRI cacheLoad = iri(NS + "cacheLoad");
     public static final IRI cacheRefresh = iri(NS + "cacheRefresh");
     public static final IRI pluginVersion = iri(NS + "pluginVersion");
+    public static final IRI agg = iri(NS + "agg");
 
     public static String sparqlPrefix(final String prefixName) {
         return "PREFIX " + prefixName + ": <" + NS + "> ";
