@@ -12,7 +12,14 @@ import com.semantalytics.stardog.kibble.webfunctions.StardogWasm;
 import com.semantalytics.stardog.kibble.webfunctions.WebFunctionVocabulary;
 import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
-import io.github.kawamuray.wasmtime.*;
+import io.github.kawamuray.wasmtime.Engine;
+import io.github.kawamuray.wasmtime.Extern;
+import io.github.kawamuray.wasmtime.Func;
+import io.github.kawamuray.wasmtime.Instance;
+import io.github.kawamuray.wasmtime.Linker;
+import io.github.kawamuray.wasmtime.Module;
+import io.github.kawamuray.wasmtime.Val;
+import io.github.kawamuray.wasmtime.WasmFunctions;
 import io.github.kawamuray.wasmtime.wasi.WasiCtx;
 
 import java.io.IOException;

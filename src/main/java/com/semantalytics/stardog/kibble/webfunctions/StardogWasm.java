@@ -12,7 +12,13 @@ import com.stardog.stark.query.impl.SelectQueryResultImpl;
 import com.stardog.stark.query.io.QueryResultFormats;
 import com.stardog.stark.query.io.QueryResultParsers;
 import com.stardog.stark.query.io.QueryResultWriters;
-import io.github.kawamuray.wasmtime.*;
+import io.github.kawamuray.wasmtime.Engine;
+import io.github.kawamuray.wasmtime.Func;
+import io.github.kawamuray.wasmtime.Instance;
+import io.github.kawamuray.wasmtime.Memory;
+import io.github.kawamuray.wasmtime.Module;
+import io.github.kawamuray.wasmtime.Store;
+import io.github.kawamuray.wasmtime.Val;
 import org.apache.commons.io.IOUtils;
 
 import java.io.ByteArrayInputStream;
