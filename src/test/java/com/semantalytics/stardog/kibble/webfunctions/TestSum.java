@@ -32,4 +32,25 @@ public class TestSum extends AbstractStardogTest {
         }
     }
 
+    @Test
+    public void testSumIpns() {
+
+    final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+            " prefix f: <ipns://wf.semantalytics.com/stardog/aggregate/> " +
+            " select (wf:agg(f:sum, ?a) AS ?result)  WHERE { VALUES ?a { 1 2 3 1 }} ";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+        assertThat(aResult).hasNext();
+        final Optional<Value> aPossibleValue = aResult.next().value("result");
+        assertThat(aPossibleValue).isPresent();
+        final Value aValue = aPossibleValue.get();
+        assertThat(assertStringLiteral(aValue));
+        final Literal aLiteral = ((Literal)aValue);
+        assertThat(Literal.longValue(aLiteral)).isEqualTo(7);
+        assertThat(aResult).isExhausted();
+    }
+}
+
+
 }
