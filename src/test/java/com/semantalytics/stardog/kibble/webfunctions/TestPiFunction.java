@@ -19,8 +19,8 @@ public class TestPiFunction extends AbstractStardogTest {
     public void testPi() {
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
-                " prefix f: <file:rust/pi/target/wasm32-unknown-unknown/release/> " +
-                " select ?result where { bind(wf:call(f:pi) AS ?result) }";
+                " prefix f: <file:rust/function/math/constants/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where { bind(wf:call(str(f:pi.wasm)) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -39,8 +39,8 @@ public class TestPiFunction extends AbstractStardogTest {
     public void compareWithNativePi() {
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
-                " prefix f: <file:rust/pi/target/wasm32-unknown-unknown/release/> " +
-                " select ?result (PI() as ?nativeResult) where { bind(wf:call(f:pi) AS ?result) }";
+                " prefix f: <file:rust/function/math/constants/target/wasm32-unknown-unknown/release/> " +
+                " select ?result (PI() as ?nativeResult) where { bind(wf:call(str(f:pi.wasm)) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 

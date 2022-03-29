@@ -17,7 +17,7 @@ public class TestSum extends AbstractStardogTest {
     public void testSum() {
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
-        " select (wf:agg(\"file:rust/sum/target/wasm32-unknown-unknown/release/sum.wasm\", ?a) AS ?result)  WHERE { VALUES ?a { 1 2 3 1}} ";
+        " select (wf:agg(\"file:rust/aggregate/sum/target/wasm32-unknown-unknown/release/sum.wasm\", ?a) AS ?result)  WHERE { VALUES ?a { 1 2 3 1}} ";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 

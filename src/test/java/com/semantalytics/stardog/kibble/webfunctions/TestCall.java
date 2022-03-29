@@ -17,7 +17,7 @@ public class TestCall extends AbstractStardogTest {
     public void testToUpper() {
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
-            "prefix f: <file:rust/toupper/target/wasm32-unknown-unknown/release/> " +
+            "prefix f: <file:rust/string/toupper/target/wasm32-unknown-unknown/release/> " +
             " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {

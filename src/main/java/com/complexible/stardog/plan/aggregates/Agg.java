@@ -114,20 +114,24 @@ public class Agg extends AbstractAggregate implements UserDefinedFunction {
 
     @Override
     protected ValueOrError _getValue() {
-        try (final Func evaluateFunction = instance.getFunc(StardogWasm.store, StardogWasm.WASM_FUNCTION_GET_VALUE).get()) {
-            final Integer output_pointer = evaluateFunction.call(StardogWasm.store)[0].i32();
-            final Value output_value = StardogWasm.readFromWasmMemory(new AtomicReference<Instance>(instance), "memory", output_pointer)[0];
-            if (output_value instanceof Literal && ((Literal) output_value).datatypeIRI().equals(iri("tag:stardog:api:array"))) {
-                final long[] arrayLiteralValues = Arrays.stream(substringBetween(((Literal) output_value).label(), "[", "]").split(",")).mapToLong(Long::valueOf).toArray();
-                return ValueOrError.General.of(new ArrayLiteral(arrayLiteralValues));
-            } else {
-                return ValueOrError.General.of(output_value);
+        if (instance != null) {
+            try (final Func evaluateFunction = instance.getFunc(StardogWasm.store, StardogWasm.WASM_FUNCTION_GET_VALUE).get()) {
+                final Integer output_pointer = evaluateFunction.call(StardogWasm.store)[0].i32();
+                final Value output_value = StardogWasm.readFromWasmMemory(new AtomicReference<Instance>(instance), "memory", output_pointer)[0];
+                if (output_value instanceof Literal && ((Literal) output_value).datatypeIRI().equals(iri("tag:stardog:api:array"))) {
+                    final long[] arrayLiteralValues = Arrays.stream(substringBetween(((Literal) output_value).label(), "[", "]").split(",")).mapToLong(Long::valueOf).toArray();
+                    return ValueOrError.General.of(new ArrayLiteral(arrayLiteralValues));
+                } else {
+                    return ValueOrError.General.of(output_value);
+                }
+            } finally {
+                if (instance != null) {
+                    instance.close();
+                    instance = null;
+                }
             }
-        } finally {
-            if(instance != null) {
-                instance.close();
-                instance = null;
-            }
+        } else {
+            return ValueOrError.Error;
         }
     }
 

@@ -18,7 +18,7 @@ public class TestLevenshteinFunction extends AbstractStardogTest {
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wasm") +
                 "prefix tricks: <https://github.com/semantalytics/stardog-extensions/blob/wasmer/src/main/resources/> " +
-                " select ?result where { bind(wasm:call(<file:////home/zcw100/git/stardog-wasm/rust/levenshtein/target/wasm32-unknown-unknown/release>, \"kitten\", \"sitting\") AS ?result) }";
+                " select ?result where { bind(wasm:call(<file:rust/string/similarity/levenshtein/target/wasm32-unknown-unknown/release>, \"kitten\", \"sitting\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 

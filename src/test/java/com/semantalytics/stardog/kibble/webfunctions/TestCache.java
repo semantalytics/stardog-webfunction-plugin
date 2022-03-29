@@ -23,7 +23,7 @@ public class TestCache extends AbstractStardogTest {
         }
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
-                "prefix f: <file:rust/toupper/target/wasm32-unknown-unknown/release/> " +
+                "prefix f: <file:rust/string/toupper/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
@@ -41,7 +41,7 @@ public class TestCache extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("file:rust/toupper/target/wasm32-unknown-unknown/release/toUpper/1");
+            assertThat(aLiteral.label()).isEqualTo("file:rust/string/toupper/target/wasm32-unknown-unknown/release/toUpper/1");
             assertThat(aResult).isExhausted();
         }
     }
@@ -78,7 +78,7 @@ public class TestCache extends AbstractStardogTest {
         }
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
-                "prefix f: <file:rust/toupper/target/wasm32-unknown-unknown/release/> " +
+                "prefix f: <file:rust/string/toupper/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { bind(wf:cacheLoad(f:toUpper) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
@@ -96,7 +96,7 @@ public class TestCache extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("file:rust/toupper/target/wasm32-unknown-unknown/release/toUpper/1");
+            assertThat(aLiteral.label()).isEqualTo("file:rust/string/toupper/target/wasm32-unknown-unknown/release/toUpper/1");
             assertThat(aResult).isExhausted();
         }
     }
@@ -111,7 +111,7 @@ public class TestCache extends AbstractStardogTest {
         }
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
-                "prefix f: <file:rust/toupper/target/wasm32-unknown-unknown/release/> " +
+                "prefix f: <file:rust/string/toupper/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { bind(wf:cacheLoad(str(f:toUpper)) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
@@ -129,7 +129,7 @@ public class TestCache extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("file:rust/toupper/target/wasm32-unknown-unknown/release/toUpper/1");
+            assertThat(aLiteral.label()).isEqualTo("file:rust/string/toupper/target/wasm32-unknown-unknown/release/toUpper/1");
             assertThat(aResult).isExhausted();
         }
     }
