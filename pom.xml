@@ -5,8 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.semantalytics.stardog</groupId>
-    <artifactId>wasmfunctions</artifactId>
-    <version>1.0.0</version>
+    <artifactId>webfunction</artifactId>
+    <version>1.0.1</version>
 
     <developers>
         <developer>
