@@ -5,4 +5,5 @@ com.semantalytics.stardog.kibble.webfunctions.CacheLoad
 com.semantalytics.stardog.kibble.webfunctions.CacheRefresh
 com.semantalytics.stardog.kibble.webfunctions.CacheList
 com.semantalytics.stardog.kibble.webfunctions.PluginVersion
+com.semantalytics.stardog.kibble.webfunctions.Get
 com.complexible.stardog.plan.aggregates.Agg

@@ -16,6 +16,8 @@ public class WebFunctionVocabulary {
     public static final IRI cacheRefresh = iri(NS + "cacheRefresh");
     public static final IRI pluginVersion = iri(NS + "pluginVersion");
     public static final IRI agg = iri(NS + "agg");
+    public static final IRI get = iri(NS + "get");
+    public static final IRI upgrade = iri(NS + "upgrade");
 
     public static String sparqlPrefix(final String prefixName) {
         return "PREFIX " + prefixName + ": <" + NS + "> ";
