@@ -1,0 +1,36 @@
+[tasks.build]
+clear = true
+command = "cargo"
+args = ["make", "--cwd", "function_math_constants", "build"]
+
+[tasks.deploy_wasm_function_math_constants]
+workspace = false
+args = ["make", "--cwd", "function_math_constants", "deploy_workspace_wasm"]
+
+[tasks.deploy_wasm]
+workspace = false
+dependencies = [
+    "deploy_snapshot_mfs",
+    "deploy_wasm_function_math_constants",
+    "deploy_publish_mfs_root",
+]
+
+[tasks.deploy_publish_mfs_root]
+private = true
+workspace = false
+script = '''
+$IPFS name publish $($IPFS files stat --hash /)
+'''
+
+[tasks.deploy_snapshot_mfs]
+private = true
+workspace = false
+script = '''
+#!/usr/bin/env bash
+
+mfs_snapshot_dir=$(date --iso-8601=minutes) #<-- test if dir alread exists, if yes fail you're running it too often
+$IPFS files mkdir --parents /snapshot/$mfs_snapshot_dir
+for dir in $(grep -v snapshot <(${IPFS} files ls / )); do
+    $IPFS files cp /$dir /snapshot/$mfs_snapshot_dir/$dir
+done
+'''

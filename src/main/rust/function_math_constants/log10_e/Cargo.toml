@@ -1,5 +1,5 @@
 [package]
-name = "log10_e"
+name = "log10ofe"
 version = "0.1.0"
 authors = ["Zachary Whitley <zachary.whitley@gmail.com>"]
 edition = "2018"

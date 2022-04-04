@@ -1,5 +1,5 @@
 [package]
-name = "frac_pi_8"
+name = "fracPi8"
 version = "0.1.0"
 authors = ["Zachary Whitley <zachary.whitley@gmail.com>"]
 edition = "2018"

@@ -17,8 +17,8 @@ public class Whatlang extends AbstractStardogTest {
     public void testLanguageDetect() {
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
-                "prefix f: <file:rust/whatlang/target/wasm32-unknown-unknown/release/> " +
-                " select ?result where { bind(wf:call(f:whatlang, \"what language do you think this is?\") AS ?result) }";
+                "prefix f: <file:src/main/rust/function_string_lang/whatlang/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where { bind(wf:call(str(f:whatlang.wasm), \"what language do you think this is?\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -28,7 +28,7 @@ public class Whatlang extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("English");
+            assertThat(aLiteral.toString()).isEqualTo("\"what language do you think this is?\"@en");
             assertThat(aResult).isExhausted();
         }
     }

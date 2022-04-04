@@ -1,5 +1,5 @@
 [package]
-name = "ln_10"
+name = "ln10"
 version = "0.1.0"
 authors = ["Zachary Whitley <zachary.whitley@gmail.com>"]
 edition = "2018"

@@ -1,44 +1,27 @@
 use std::ffi::{CStr, CString}; 
-use std::mem; 
-use std::os::raw::{c_char, c_void}; 
+use std::os::raw::c_char;
 use serde_json::{Value, json};
 
-#[no_mangle]
-pub extern fn malloc(size: usize) -> *mut c_void {
-    let mut buffer = Vec::with_capacity(size);
-    let pointer = buffer.as_mut_ptr();
-    mem::forget(buffer);
-
-    pointer as *mut c_void
-}
+pub use stardog_function::*;
 
 #[no_mangle]
-pub extern fn free(pointer: *mut c_void, capacity: usize) {
-    unsafe {
-        let _ = Vec::from_raw_parts(pointer, 0, capacity);
-    }
-}
+pub extern fn evaluate(arg: *mut c_char) -> *mut c_char {
+    let args_str = unsafe { CStr::from_ptr(arg).to_str().unwrap() };
 
-extern {
-        pub fn mappingDictionaryAdd(buf_addr: i32) -> i64;
-}
+    let values: Value = serde_json::from_str(args_str).unwrap();
+    let array_ids = values["results"]["bindings"][0].as_object().unwrap().values().into_iter().map(|val| {
+        let sparql_query_result = json!({"head": {"vars":["result"]}, "results":{"bindings":[{"result": val}]}}).to_string();
 
-extern {
-        pub fn mappingDictionaryGet(buf_addr: i64) -> i32;
-}
+        let sqr_ptr = unsafe { CString::from_vec_unchecked(sparql_query_result.into_bytes()) }.into_raw();
+        let id = unsafe { mappingDictionaryAdd(sqr_ptr as i32) };
+        return id.to_string();
+    }).join(",");
 
-#[no_mangle]
-pub extern fn evaluate(args: *mut c_char) -> *mut c_char {
-    let args_str = unsafe { CStr::from_ptr(args).to_str().unwrap() };
+    let sparql_query_result = json!({
+      "head": {"vars":["result"]}, "results":{"bindings":[{"result":{"type":"literal","value": "[" + array_ids + "]", "datatype": "tag:stardog:api:array"}}]}
+    }).to_string();
 
-    let sparql_results: Value = serde_json::from_str(args_str).unwrap();
-    let values = sparql_results["results"]["bindings"][0];
-
-    let output = json!({
-      "head": {"vars":["result"]}, "results":{"bindings":[{"result":{"type":"literal","value": ""}}]}
-    }).to_string().as_bytes().to_vec();
-
-    unsafe { CString::from_vec_unchecked(output) }.into_raw()
+    return unsafe { CString::from_vec_unchecked(sparql_query_result.into_bytes()) }.into_raw();
 
 }
 

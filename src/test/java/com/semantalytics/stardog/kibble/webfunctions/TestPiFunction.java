@@ -16,6 +16,26 @@ import static org.assertj.core.api.Assertions.within;
 public class TestPiFunction extends AbstractStardogTest {
 
     @Test
+    public void testPiWasi() {
+
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+                " prefix f: <file:rust/function_math_constants/target/wasm32-wasi/release/> " +
+                " select ?result where { bind(wf:call(str(f:pi.wasm)) AS ?result) }";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(Literal.floatValue(aLiteral)).isEqualTo(3.1415926535f, within(0.00001f));
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
     public void testPi() {
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
