@@ -12,13 +12,8 @@ import com.stardog.stark.query.impl.SelectQueryResultImpl;
 import com.stardog.stark.query.io.QueryResultFormats;
 import com.stardog.stark.query.io.QueryResultParsers;
 import com.stardog.stark.query.io.QueryResultWriters;
-import io.github.kawamuray.wasmtime.Engine;
-import io.github.kawamuray.wasmtime.Func;
-import io.github.kawamuray.wasmtime.Instance;
-import io.github.kawamuray.wasmtime.Memory;
-import io.github.kawamuray.wasmtime.Module;
-import io.github.kawamuray.wasmtime.Store;
-import io.github.kawamuray.wasmtime.Val;
+import io.github.kawamuray.wasmtime.*;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import java.io.ByteArrayInputStream;
@@ -89,9 +84,9 @@ public class StardogWasm {
     }
 
     public static Value[] readFromWasmMemory(AtomicReference<Instance> instanceRef, String name, int output_pointer) {
-        try (final Memory memory = instanceRef.get().getMemory(StardogWasm.store, name).get()) {
+        try (final Memory memory = instanceRef.get().getMemory(store, name).get()) {
             try {
-                final SelectQueryResult selectQueryResult = QueryResultParsers.readSelect(new ByteArrayInputStream(StardogWasm.readResult(StardogWasm.store, memory, output_pointer).toByteArray()), QueryResultFormats.JSON);
+                final SelectQueryResult selectQueryResult = QueryResultParsers.readSelect(new ByteArrayInputStream(readResult(store, memory, output_pointer).toByteArray()), QueryResultFormats.JSON);
                 final Optional<BindingSet> bs = selectQueryResult.stream().findFirst();
 
                 if (bs.isPresent()) {
@@ -106,8 +101,8 @@ public class StardogWasm {
     }
 
     public static void free(AtomicReference<Instance> instanceRef, Pair<Integer, Integer> pointer) {
-        try (final Func freeFunction = instanceRef.get().getFunc(StardogWasm.store, StardogWasm.WASM_FUNCTION_FREE).get();) {
-            freeFunction.call(StardogWasm.store, Val.fromI32(pointer.first), Val.fromI32(pointer.second));
+        try (final Func freeFunction = instanceRef.get().getFunc(store, WASM_FUNCTION_FREE).get();) {
+            freeFunction.call(store, Val.fromI32(pointer.first), Val.fromI32(pointer.second));
         }
     }
 
@@ -124,18 +119,18 @@ public class StardogWasm {
         QueryResultWriters.write(queryResult, byteArrayOutputStream, QueryResultFormats.JSON);
 
         final Integer input_pointer;
-        try (final Func mallocFunction = instanceRef.get().getFunc(StardogWasm.store, StardogWasm.WASM_FUNCTION_MALLOC).get()) {
+        try (final Func mallocFunction = instanceRef.get().getFunc(store, WASM_FUNCTION_MALLOC).get()) {
             byteArrayOutputStream.write('\0');
-            mallocFunction.call(StardogWasm.store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
-            input_pointer = mallocFunction.call(StardogWasm.store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
+            mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
+            input_pointer = mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
         }
 
-        try(final Memory memory = instanceRef.get().getMemory(StardogWasm.store, name).get()) {
-            final ByteBuffer memoryBuffer = memory.buffer(StardogWasm.store);
+        try(final Memory memory = instanceRef.get().getMemory(store, name).get()) {
+            final ByteBuffer memoryBuffer = memory.buffer(store);
             final byte[] input = byteArrayOutputStream.toByteArray();
-            final int pages = (int) Math.ceil(input.length / 64.0);
-            if (pages > memory.size(StardogWasm.store)) {
-                memory.grow(StardogWasm.store, pages - memory.size(StardogWasm.store));
+            final int pages = (int) Math.ceil(input.length / (64.0 * FileUtils.ONE_KB));
+            if (pages > memory.size(store)) {
+                memory.grow(store, pages - memory.size(store));
             }
 
             memoryBuffer.position(input_pointer);
@@ -151,18 +146,18 @@ public class StardogWasm {
         QueryResultWriters.write(queryResult, byteArrayOutputStream, QueryResultFormats.JSON);
 
         Integer input_pointer;
-        try (final Func mallocFunction = instanceRef.get().getFunc(StardogWasm.store, StardogWasm.WASM_FUNCTION_MALLOC).get();) {
+        try (final Func mallocFunction = instanceRef.get().getFunc(store, WASM_FUNCTION_MALLOC).get();) {
             byteArrayOutputStream.write('\0');
-            mallocFunction.call(StardogWasm.store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
-            input_pointer = mallocFunction.call(StardogWasm.store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
+            mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
+            input_pointer = mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
         }
 
-        try(final Memory memory = instanceRef.get().getMemory(StardogWasm.store, name).get()) {
-            final ByteBuffer memoryBuffer = memory.buffer(StardogWasm.store);
+        try(final Memory memory = instanceRef.get().getMemory(store, name).get()) {
+            final ByteBuffer memoryBuffer = memory.buffer(store);
             final byte[] input = byteArrayOutputStream.toByteArray();
             final int pages = (int) Math.ceil(input.length / 64.0);
-            if (pages > memory.size(StardogWasm.store)) {
-                memory.grow(StardogWasm.store, pages - memory.size(StardogWasm.store));
+            if (pages > memory.size(store)) {
+                memory.grow(store, pages - memory.size(store));
             }
 
             memoryBuffer.position(input_pointer);
@@ -182,6 +177,6 @@ public class StardogWasm {
             bindingSetsBuilder.add(vars.get(i), values[i]);
         });
         final List<BindingSet> bindings = Collections.singletonList(bindingSetsBuilder.build());
-        return StardogWasm.writeBindingsToWasmMemory(instanceRef, name, bindings, vars);
+        return writeBindingsToWasmMemory(instanceRef, name, bindings, vars);
     }
 }
