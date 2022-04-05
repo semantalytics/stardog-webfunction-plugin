@@ -19,15 +19,14 @@ import java.time.Duration;
 import java.util.Base64;
 
 import static com.stardog.stark.Values.*;
-import static java.time.temporal.ChronoUnit.*;
 
 public class Get extends AbstractFunction implements UserDefinedFunction {
 
     private static final int URL_INDEX = 0;
     private static final int CONNECTION_TIMEOUT_INDEX = 1;
     private static final int READ_TIMEOUT_INDEX = 2;
-    private static final int READ_TIMEOUT_DEFAULT = Math.toIntExact(Duration.ofSeconds(60).get(MILLIS));
-    private static final int CONNECTION_TIMEOUT_DEFAULT = Math.toIntExact(Duration.ofSeconds(30).get(MILLIS));
+    private static final int READ_TIMEOUT_DEFAULT = Math.toIntExact(Duration.ofSeconds(60).toMillis());
+    private static final int CONNECTION_TIMEOUT_DEFAULT = Math.toIntExact(Duration.ofSeconds(30).toMillis());
 
     public Get() {
         super(Range.atMost(3), WebFunctionVocabulary.get.toString());

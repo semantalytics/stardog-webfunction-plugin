@@ -8,6 +8,7 @@ import com.complexible.stardog.plan.filter.ValueSolution;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
 import com.google.common.base.Preconditions;
+import com.semantalytics.stardog.kibble.webfunctions.Call;
 import com.semantalytics.stardog.kibble.webfunctions.StardogWasm;
 import com.semantalytics.stardog.kibble.webfunctions.WebFunctionVocabulary;
 import com.stardog.stark.Literal;
@@ -21,10 +22,13 @@ import io.github.kawamuray.wasmtime.Module;
 import io.github.kawamuray.wasmtime.Val;
 import io.github.kawamuray.wasmtime.WasmFunctions;
 import io.github.kawamuray.wasmtime.wasi.WasiCtx;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.CodeSource;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -37,7 +41,23 @@ import static org.apache.commons.lang3.StringUtils.substringBetween;
 
 public class Agg extends AbstractAggregate implements UserDefinedFunction {
 
-    private static final int pluginVersion = 1;
+    private static final String pluginVersion;
+
+    static {
+        String sha256;
+        CodeSource codeSource = Call.class.getProtectionDomain().getCodeSource();
+        if (codeSource != null) {
+            try (InputStream is = codeSource.getLocation().openStream()) {
+                sha256 = DigestUtils.sha256Hex(is);
+            } catch (IOException e) {
+                sha256 = "";
+            }
+        } else {
+            sha256 = "";
+        }
+        pluginVersion = sha256;
+    }
+
     private Instance instance;
 
     @Override
@@ -185,7 +205,7 @@ public class Agg extends AbstractAggregate implements UserDefinedFunction {
         }
     }
 
-    public static int pluginVersion() {
+    public static String pluginVersion() {
         return pluginVersion;
     }
 }

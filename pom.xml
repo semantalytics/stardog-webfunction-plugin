@@ -135,7 +135,7 @@
     </repositories>
 
     <build>
-        <finalName>semantalytics-stardog-${project.artifactId}-${project.version}-sd${stardog.major.version}</finalName>
+        <finalName>semantalytics-stardog-${project.artifactId}-${project.version}-sd${stardog.version}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

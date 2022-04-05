@@ -5,29 +5,7 @@ use serde_json::{Value, json};
 use voca_rs::case::capitalize;
 use std::str::FromStr;
 
-#[no_mangle]
-pub extern fn malloc(size: usize) -> *mut c_void {
-    let mut buffer = Vec::with_capacity(size);
-    let pointer = buffer.as_mut_ptr();
-    mem::forget(buffer);
-
-    pointer as *mut c_void
-}
-
-#[no_mangle]
-pub extern fn free(pointer: *mut c_void, capacity: usize) {
-    unsafe {
-        let _ = Vec::from_raw_parts(pointer, 0, capacity);
-    }
-}
-
-extern {
-        pub fn mappingDictionaryAdd(buf_addr: i32) -> i64;
-}
-
-extern {
-        pub fn mappingDictionaryGet(buf_addr: i64) -> i32;
-}
+pub use stardog_function::*;
 
 #[no_mangle]
 pub extern fn evaluate(subject: *mut c_char) -> *mut c_char {

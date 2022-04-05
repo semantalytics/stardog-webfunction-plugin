@@ -9,16 +9,16 @@ pub extern fn evaluate(arg: *mut c_char) -> *mut c_char {
     let args_str = unsafe { CStr::from_ptr(arg).to_str().unwrap() };
 
     let values: Value = serde_json::from_str(args_str).unwrap();
-    let array_ids = values["results"]["bindings"][0].as_object().unwrap().values().into_iter().map(|val| {
-        let sparql_query_result = json!({"head": {"vars":["result"]}, "results":{"bindings":[{"result": val}]}}).to_string();
+    let array_ids = values["results"]["bindings"][0].as_object().unwrap().into_iter().filter(|(key, _)| key.as_str().ne("value_0")).map(|(_, value)| {
+        let sparql_query_result = json!({"head": {"vars":["result"]}, "results":{"bindings":[{"result": value}]}}).to_string();
 
         let sqr_ptr = unsafe { CString::from_vec_unchecked(sparql_query_result.into_bytes()) }.into_raw();
         let id = unsafe { mappingDictionaryAdd(sqr_ptr as i32) };
         return id.to_string();
-    }).join(",");
+    }).collect::<Vec<String>>().join(", ");
 
     let sparql_query_result = json!({
-      "head": {"vars":["result"]}, "results":{"bindings":[{"result":{"type":"literal","value": "[" + array_ids + "]", "datatype": "tag:stardog:api:array"}}]}
+      "head": {"vars":["result"]}, "results":{"bindings":[{"result":{"type":"literal","value": format!("[{}]", array_ids), "datatype": "tag:stardog:api:array"}}]}
     }).to_string();
 
     return unsafe { CString::from_vec_unchecked(sparql_query_result.into_bytes()) }.into_raw();

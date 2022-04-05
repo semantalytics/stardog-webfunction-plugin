@@ -1,8 +1,10 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
+import com.amazonaws.util.StringUtils;
 import com.complexible.common.base.Pair;
 import com.complexible.common.rdf.model.ArrayLiteral;
 import com.complexible.stardog.index.dictionary.MappingDictionary;
+import com.complexible.stardog.plan.PropertyFunction;
 import com.complexible.stardog.plan.filter.AbstractExpression;
 import com.complexible.stardog.plan.filter.Expression;
 import com.complexible.stardog.plan.filter.ExpressionVisitor;
@@ -20,10 +22,13 @@ import io.github.kawamuray.wasmtime.WasmFunctions;
 import io.github.kawamuray.wasmtime.Linker;
 import io.github.kawamuray.wasmtime.Extern;
 import io.github.kawamuray.wasmtime.wasi.WasiCtx;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.CodeSource;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -35,10 +40,25 @@ import static org.apache.commons.lang3.StringUtils.*;
 
 public class Call extends AbstractExpression implements UserDefinedFunction {
 
-    private static final int pluginVersion = 1;
+    private static final String pluginVersion;
+
+    static {
+        String sha256;
+        CodeSource codeSource = Call.class.getProtectionDomain().getCodeSource();
+        if (codeSource != null) {
+            try (InputStream is = codeSource.getLocation().openStream()) {
+                sha256 = DigestUtils.sha256Hex(is);
+            } catch (IOException e) {
+                sha256 = "";
+            }
+        } else {
+            sha256 = "";
+        }
+        pluginVersion = sha256;
+    }
 
     @Override
-    public void initialize() {
+        public void initialize() {
     }
 
     public Call() {
@@ -78,7 +98,7 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
                                 final Integer output_pointer = evaluateFunction.call(StardogWasm.store, Val.fromI32(input))[0].i32();
                                 final Value output_value = StardogWasm.readFromWasmMemory(instanceRef, "memory", output_pointer)[0];
                                 if(output_value instanceof Literal && ((Literal)output_value).datatypeIRI().equals(iri("tag:stardog:api:array"))) {
-                                    final long[] arrayLiteralValues = Arrays.stream(substringBetween(((Literal) output_value).label(), "[", "]").split(",")).mapToLong(Long::valueOf).toArray();
+                                    final long[] arrayLiteralValues = Arrays.stream(substringBetween(((Literal) output_value).label(), "[", "]").split(",")).map(StringUtils::trim).mapToLong(Long::valueOf).toArray();
                                     return ValueOrError.General.of(new ArrayLiteral(arrayLiteralValues));
                                 } else {
                                     return ValueOrError.General.of(output_value);
@@ -133,7 +153,7 @@ public class Call extends AbstractExpression implements UserDefinedFunction {
         return instanceRef.get();
     }
 
-    public static int pluginVersion() {
+    public static String pluginVersion() {
         return pluginVersion;
     }
 

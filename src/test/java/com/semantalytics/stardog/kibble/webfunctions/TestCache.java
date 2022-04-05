@@ -96,7 +96,7 @@ public class TestCache extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("file:rust/string/toupper/target/wasm32-unknown-unknown/release/toUpper/1");
+            assertThat(aLiteral.label()).isEqualTo("file:src/main/rust/function_string/to_upper/target/wasm32-unknown-unknown/release/toUpper/1");
             assertThat(aResult).isExhausted();
         }
     }

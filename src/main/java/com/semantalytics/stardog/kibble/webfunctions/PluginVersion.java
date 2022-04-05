@@ -12,7 +12,7 @@ import static com.stardog.stark.Values.*;
 public class PluginVersion extends AbstractFunction implements UserDefinedFunction {
 
     public PluginVersion() {
-        super(Range.all(), WebFunctionVocabulary.pluginVersion.toString());
+        super(0, WebFunctionVocabulary.pluginVersion.toString());
     }
 
     public PluginVersion(final PluginVersion pluginVersion) {

@@ -19,8 +19,28 @@ public class TestPiFunction extends AbstractStardogTest {
     public void testPiWasi() {
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
-                " prefix f: <file:rust/function_math_constants/target/wasm32-wasi/release/> " +
+                " prefix f: <file:src/main/rust/function_math_constants/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { bind(wf:call(str(f:pi.wasm)) AS ?result) }";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(Literal.floatValue(aLiteral)).isEqualTo(3.1415926535f, within(0.00001f));
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
+    public void testPiOptWasm() {
+
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+                " prefix f: <file:src/main/rust/function_math_constants/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where { bind(wf:call(str(f:pi_opt.wasm)) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 

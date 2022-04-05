@@ -27,7 +27,7 @@ public class TestPluginVersion extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal) aValue);
-            assertThat(Literal.intValue(aLiteral)).isEqualTo(Call.pluginVersion());
+            assertThat((aLiteral.label())).isEqualTo(Call.pluginVersion());
             assertThat(aResult).isExhausted();
         }
     }

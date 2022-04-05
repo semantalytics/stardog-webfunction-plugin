@@ -8,14 +8,15 @@ pub use stardog_function::*;
 pub extern fn evaluate(subject: *mut c_char) -> *mut c_char {
     let subject = unsafe { CStr::from_ptr(subject).to_str().unwrap() };
 
-    let mut output = b"".to_vec();
-    let v: Value = serde_json::from_str(subject).unwrap();
-    let result = v["results"]["bindings"][0]["value_1"]["value"].as_str().unwrap().to_uppercase();
+    let values: Value = serde_json::from_str(subject).unwrap();
+    let value_1 = values["results"]["bindings"][0]["value_1"]["value"].as_str().unwrap();
 
-    output.extend(json!({
+    let result = value_1.to_uppercase();
+
+    let result = json!({
       "head": {"vars":["result"]}, "results":{"bindings":[{"result":{"type":"literal","value": result}}]}
-    }).to_string().bytes());
+    }).to_string().into_bytes();
 
-    unsafe { CString::from_vec_unchecked(output) }.into_raw()
+    unsafe { CString::from_vec_unchecked(result) }.into_raw()
 
 }

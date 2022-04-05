@@ -12,7 +12,13 @@ import com.stardog.stark.query.impl.SelectQueryResultImpl;
 import com.stardog.stark.query.io.QueryResultFormats;
 import com.stardog.stark.query.io.QueryResultParsers;
 import com.stardog.stark.query.io.QueryResultWriters;
-import io.github.kawamuray.wasmtime.*;
+import io.github.kawamuray.wasmtime.Engine;
+import io.github.kawamuray.wasmtime.Func;
+import io.github.kawamuray.wasmtime.Instance;
+import io.github.kawamuray.wasmtime.Memory;
+import io.github.kawamuray.wasmtime.Module;
+import io.github.kawamuray.wasmtime.Store;
+import io.github.kawamuray.wasmtime.Val;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
@@ -27,6 +33,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
+
 
 import static com.stardog.stark.Values.literal;
 
@@ -110,7 +117,10 @@ public class StardogWasm {
 
         final List<String> vars = Lists.newArrayListWithCapacity(values.length);
         final BindingSets.Builder bindingSetsBuilder = BindingSets.builder();
-        IntStream.range(0, values.length).forEach(i -> bindingSetsBuilder.add(Bindings.of(String.format("value_%d", i), values[i])));
+        IntStream.range(0, values.length).forEach(i -> {
+            vars.add(String.format("value_%d", i));
+            bindingSetsBuilder.add(String.format("value_%d", i), values[i]);
+        });
         final List<BindingSet> bindings = Collections.singletonList(bindingSetsBuilder.build());
 
         final SelectQueryResult queryResult = new SelectQueryResultImpl(vars, bindings);
