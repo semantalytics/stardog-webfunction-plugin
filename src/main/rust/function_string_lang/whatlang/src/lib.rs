@@ -8,7 +8,7 @@ pub use stardog_function::*;
 
 #[no_mangle]
 pub extern fn evaluate(arg: *mut c_char) -> *mut c_char {
-    let arg_str = unsafe { CStr::from_ptr().to_str().unwrap() };
+    let arg_str = unsafe { CStr::from_ptr(arg).to_str().unwrap() };
 
     let values: Value = serde_json::from_str(arg_str).unwrap();
     let value_1 = values["results"]["bindings"][0]["value_1"]["value"].as_str().unwrap();
