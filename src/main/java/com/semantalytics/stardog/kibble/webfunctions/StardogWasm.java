@@ -1,6 +1,7 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.complexible.common.base.Pair;
+import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -47,6 +48,8 @@ public class StardogWasm {
     public static final String WASM_FUNCTION_GET_VALUE = "get_value";
     public static final String WASM_FUNCTION_EVALUATE = "evaluate";
     public static final String WASM_FUNCTION_DOC = "doc";
+
+    public static final long WASM_PAGE_SIZE = 64 * FileUtils.ONE_KB;
 
     public static LoadingCache<URL, Module> loadingCache = CacheBuilder.newBuilder().softValues().removalListener(
                     (RemovalListener<URL, Module>) removal -> removal.getValue().close())
@@ -138,7 +141,7 @@ public class StardogWasm {
         try(final Memory memory = instanceRef.get().getMemory(store, name).get()) {
             final ByteBuffer memoryBuffer = memory.buffer(store);
             final byte[] input = byteArrayOutputStream.toByteArray();
-            final int pages = (int) Math.ceil(input.length / (64.0 * FileUtils.ONE_KB));
+            final int pages = (int) Math.ceil(input.length / WASM_PAGE_SIZE);
             if (pages > memory.size(store)) {
                 memory.grow(store, pages - memory.size(store));
             }
@@ -165,7 +168,7 @@ public class StardogWasm {
         try(final Memory memory = instanceRef.get().getMemory(store, name).get()) {
             final ByteBuffer memoryBuffer = memory.buffer(store);
             final byte[] input = byteArrayOutputStream.toByteArray();
-            final int pages = (int) Math.ceil(input.length / 64.0);
+            final int pages = (int) Math.ceil(input.length / WASM_PAGE_SIZE);
             if (pages > memory.size(store)) {
                 memory.grow(store, pages - memory.size(store));
             }
