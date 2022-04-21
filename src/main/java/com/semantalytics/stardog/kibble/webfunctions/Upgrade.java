@@ -1,10 +1,13 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
+import com.complexible.common.util.ServiceLoaders;
 import com.complexible.stardog.StardogVersion;
 import com.complexible.stardog.plan.filter.ExpressionVisitor;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.AbstractFunction;
+import com.complexible.stardog.plan.filter.functions.FunctionRegistry;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
+import com.complexible.stardog.protocols.http.server.StardogHttpServiceLoader;
 import com.google.common.collect.Range;
 import com.google.common.io.Resources;
 import com.stardog.stark.Value;

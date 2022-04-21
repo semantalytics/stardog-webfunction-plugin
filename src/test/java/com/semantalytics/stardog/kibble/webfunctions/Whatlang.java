@@ -16,7 +16,7 @@ public class Whatlang extends AbstractStardogTest {
     @Test
     public void testLanguageDetect() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 "prefix f: <file:src/main/rust/function_string_lang/whatlang/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { bind(wf:call(str(f:whatlang.wasm), \"what language do you think this is?\") AS ?result) }";
 

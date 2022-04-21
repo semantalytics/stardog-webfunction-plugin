@@ -16,7 +16,7 @@ public class TestGet extends AbstractStardogTest {
     @Test
     public void testTwoArg() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 "select ?result where { unnest(wf:get(<http://google.com>) as ?result) }";
 
         try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {

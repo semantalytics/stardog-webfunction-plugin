@@ -26,8 +26,6 @@ import java.net.InetSocketAddress;
     TestCache.class,
     TestCall.class,
     TestDoc.class,
-    TestLevenshteinFunction.class,
-    TestPiFunction.class,
     TestToUpper.class,
     TestPluginVersion.class,
     TestSum.class,

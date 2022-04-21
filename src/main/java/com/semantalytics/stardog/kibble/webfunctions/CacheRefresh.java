@@ -13,8 +13,10 @@ import java.net.URL;
 
 public class CacheRefresh extends AbstractFunction implements UserDefinedFunction {
 
+    private static final WebFunctionVocabulary names = WebFunctionVocabulary.cacheRefresh;
+
     public CacheRefresh() {
-        super(Range.all(), WebFunctionVocabulary.cacheRefresh.toString());
+        super(Range.all(), names.getNames().toArray(new String[0]));
     }
 
     public CacheRefresh(final CacheRefresh clearCache) {
@@ -28,14 +30,7 @@ public class CacheRefresh extends AbstractFunction implements UserDefinedFunctio
         } else {
             for (Value value : values) {
                 try {
-                    final URL wasmUrl;
-                    if (assertIRI(value)) {
-                        wasmUrl = new URL(value.toString() + '/' + Call.pluginVersion());
-                    } else if (assertLiteral(value)) {
-                        wasmUrl = new URL(((Literal) value).label() + '/' + Call.pluginVersion());
-                    } else {
-                        wasmUrl = null;
-                    }
+                    final URL wasmUrl = StardogWasm.getWasmUrl(value);
                     StardogWasm.loadingCache.refresh(wasmUrl);
                 } catch (MalformedURLException e) {
                     return ValueOrError.Error;

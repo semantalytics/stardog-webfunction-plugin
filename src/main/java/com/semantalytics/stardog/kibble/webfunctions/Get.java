@@ -10,6 +10,7 @@ import com.stardog.stark.Value;
 import com.stardog.stark.impl.IntegerLiteral;
 import com.stardog.stark.impl.StringLiteral;
 import org.apache.commons.io.IOUtils;
+import org.apache.james.mime4j.util.MimeUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -22,14 +23,17 @@ import static com.stardog.stark.Values.*;
 
 public class Get extends AbstractFunction implements UserDefinedFunction {
 
+    private static final WebFunctionVocabulary names = WebFunctionVocabulary.get;
+
     private static final int URL_INDEX = 0;
     private static final int CONNECTION_TIMEOUT_INDEX = 1;
     private static final int READ_TIMEOUT_INDEX = 2;
     private static final int READ_TIMEOUT_DEFAULT = Math.toIntExact(Duration.ofSeconds(60).toMillis());
     private static final int CONNECTION_TIMEOUT_DEFAULT = Math.toIntExact(Duration.ofSeconds(30).toMillis());
 
+
     public Get() {
-        super(Range.atMost(3), WebFunctionVocabulary.get.toString());
+        super(Range.atMost(3), names.getNames().toArray(new String[0]));
     }
 
     public Get(final Get get) {

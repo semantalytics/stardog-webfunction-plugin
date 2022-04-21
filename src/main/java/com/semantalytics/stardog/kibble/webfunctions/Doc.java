@@ -9,6 +9,7 @@ import com.complexible.stardog.plan.filter.ExpressionVisitor;
 import com.complexible.stardog.plan.filter.ValueSolution;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
+import com.complexible.stardog.security.User;
 import com.google.common.collect.Lists;
 import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
@@ -35,6 +36,8 @@ import static io.github.kawamuray.wasmtime.WasmValType.I64;
 import static org.apache.commons.lang3.StringUtils.substringBetween;
 
 public class Doc extends AbstractExpression implements UserDefinedFunction {
+
+    private static final WebFunctionVocabulary names = WebFunctionVocabulary.doc;
 
     private static final int pluginVersion = 1;
 
@@ -133,12 +136,12 @@ public class Doc extends AbstractExpression implements UserDefinedFunction {
 
     @Override
     public String getName() {
-        return WebFunctionVocabulary.doc.toString();
+        return names.getImmutableName();
     }
 
     @Override
     public List<String> getNames() {
-        return Lists.newArrayList(getName());
+        return names.getNames();
     }
 
     @Override

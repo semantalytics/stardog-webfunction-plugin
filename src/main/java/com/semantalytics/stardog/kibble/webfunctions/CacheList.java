@@ -7,13 +7,14 @@ import com.complexible.stardog.plan.filter.ExpressionVisitor;
 import com.complexible.stardog.plan.filter.ValueSolution;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
-import com.google.common.collect.Lists;
 import com.stardog.stark.Values;
 
 import java.net.URL;
 import java.util.List;
 
 public class CacheList extends AbstractExpression implements UserDefinedFunction {
+
+    private static final WebFunctionVocabulary names = WebFunctionVocabulary.cacheList;
 
     public CacheList() {
         super(new Expression[0]);
@@ -54,12 +55,12 @@ public class CacheList extends AbstractExpression implements UserDefinedFunction
 
     @Override
     public String getName() {
-        return WebFunctionVocabulary.cacheList.toString();
+        return names.getImmutableName();
     }
 
     @Override
     public List<String> getNames() {
-        return Lists.newArrayList(getName());
+        return names.getNames();
     }
 }
 

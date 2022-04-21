@@ -1,42 +1,55 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.complexible.common.base.Pair;
-import com.complexible.stardog.plan.filter.expr.ValueOrError;
+import com.complexible.stardog.StardogException;
+import com.complexible.stardog.index.dictionary.MappingDictionary;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.collect.Lists;
+import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
-import com.stardog.stark.query.*;
+import com.stardog.stark.query.Binding;
+import com.stardog.stark.query.BindingSet;
+import com.stardog.stark.query.BindingSets;
+import com.stardog.stark.query.SelectQueryResult;
 import com.stardog.stark.query.impl.SelectQueryResultImpl;
 import com.stardog.stark.query.io.QueryResultFormats;
 import com.stardog.stark.query.io.QueryResultParsers;
 import com.stardog.stark.query.io.QueryResultWriters;
 import io.github.kawamuray.wasmtime.Engine;
+import io.github.kawamuray.wasmtime.Extern;
 import io.github.kawamuray.wasmtime.Func;
 import io.github.kawamuray.wasmtime.Instance;
+import io.github.kawamuray.wasmtime.Linker;
 import io.github.kawamuray.wasmtime.Memory;
-import io.github.kawamuray.wasmtime.Module;
 import io.github.kawamuray.wasmtime.Store;
 import io.github.kawamuray.wasmtime.Val;
+import io.github.kawamuray.wasmtime.Module;
+import io.github.kawamuray.wasmtime.WasmFunctions;
+import io.github.kawamuray.wasmtime.wasi.WasiCtx;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
 
 import static com.stardog.stark.Values.literal;
+import static io.github.kawamuray.wasmtime.WasmValType.I32;
+import static io.github.kawamuray.wasmtime.WasmValType.I64;
 
 public class StardogWasm {
 
@@ -63,6 +76,40 @@ public class StardogWasm {
             });
 
     public static Store<Void> store = Store.withoutData();
+
+    static Instance initWasm(final URL wasmUrl, MappingDictionary mappingDictionary) throws ExecutionException {
+        final AtomicReference<Instance> instanceRef = new AtomicReference<>();
+        try(final Engine engine = StardogWasm.store.engine()) {
+            final Module module = StardogWasm.loadingCache.get(wasmUrl);
+
+            final Func mappingDictionaryGetFunc = WasmFunctions.wrap(StardogWasm.store, I64, I32, (id) -> {
+                final Value value = mappingDictionary.getValue(id);
+
+                Pair<Integer, Integer> buf = null;
+                //TODO fix this. possible NPE
+                try {
+                    buf = StardogWasm.writeToWasmMemory(instanceRef, "memory", new Value[] {value});
+                } catch (IOException e) {
+                    //TODO ???
+                }
+
+                return buf.first;
+            });
+
+            final Func mappingDictionaryAddFunc = WasmFunctions.wrap(StardogWasm.store, I32, I64, (addr) ->
+                    mappingDictionary.add(StardogWasm.readFromWasmMemory(instanceRef, "memory", addr)[0]));
+
+            try (Linker linker = new Linker(engine)) {
+                linker.define("env", StardogWasm.WASM_FUNCTION_MAPPING_DICTIONARY_ADD, Extern.fromFunc(mappingDictionaryAddFunc));
+                linker.define("env", StardogWasm.WASM_FUNCTION_MAPPING_DICTIONARY_GET, Extern.fromFunc(mappingDictionaryGetFunc));
+                linker.module(StardogWasm.store, "", module);
+
+                WasiCtx.addToLinker(linker);
+                instanceRef.set(linker.instantiate(StardogWasm.store, module));
+            }
+        }
+        return instanceRef.get();
+    }
 
     private static byte[] getWasm(final URL wasmUrl) throws IOException {
 
@@ -96,19 +143,30 @@ public class StardogWasm {
     public static Value[] readFromWasmMemory(AtomicReference<Instance> instanceRef, String name, int output_pointer) {
         try (final Memory memory = instanceRef.get().getMemory(store, name).get()) {
             try {
-                final SelectQueryResult selectQueryResult = QueryResultParsers.readSelect(new ByteArrayInputStream(readResult(store, memory, output_pointer).toByteArray()), QueryResultFormats.JSON);
+                SelectQueryResult selectQueryResult = QueryResultParsers.readSelect(new ByteArrayInputStream(readResult(store, memory, output_pointer).toByteArray()), QueryResultFormats.JSON);
                 final Optional<BindingSet> bs = selectQueryResult.stream().findFirst();
 
                 if (bs.isPresent()) {
                     return bs.get().stream().map(Binding::value).toArray(Value[]::new);
                 } else {
+                    //TODO not sure if this is the right thing to do here
                     return new Value[0];
                 }
             } catch (IOException e) {
+                //TODO not sure if this is the right thing to do here
                 return new Value[0];
             }
         }
     }
+
+    public static SelectQueryResult readFromWasmMemorySelectQueryResult(AtomicReference<Instance> instanceRef, String name, int output_pointer) {
+        try (final Memory memory = instanceRef.get().getMemory(store, name).get()) {
+                return QueryResultParsers.readSelect(new ByteArrayInputStream(readResult(store, memory, output_pointer).toByteArray()), QueryResultFormats.JSON);
+        } catch (IOException e) {
+            throw new StardogException(e);
+        }
+    }
+
 
     public static void free(AtomicReference<Instance> instanceRef, Pair<Integer, Integer> pointer) {
         try (final Func freeFunction = instanceRef.get().getFunc(store, WASM_FUNCTION_FREE).get();) {
@@ -141,7 +199,7 @@ public class StardogWasm {
         try(final Memory memory = instanceRef.get().getMemory(store, name).get()) {
             final ByteBuffer memoryBuffer = memory.buffer(store);
             final byte[] input = byteArrayOutputStream.toByteArray();
-            final int pages = (int) Math.ceil(input.length / WASM_PAGE_SIZE);
+            final int pages = (int)(input.length / WASM_PAGE_SIZE + 1);
             if (pages > memory.size(store)) {
                 memory.grow(store, pages - memory.size(store));
             }
@@ -192,4 +250,23 @@ public class StardogWasm {
         final List<BindingSet> bindings = Collections.singletonList(bindingSetsBuilder.build());
         return writeBindingsToWasmMemory(instanceRef, name, bindings, vars);
     }
+
+    public static URL getWasmUrl(final Value value) throws MalformedURLException {
+        if (value instanceof Literal) {
+            return new URL(((Literal) value).label());
+        } else {
+            return new URL(value.toString() + '/' + PluginHash.hash);
+        }
+    }
+
+    /*
+    public List<Value> call(String wasmFunc, AtomicReference<Instance> instanceRef, String memoryName, final List<Value> input) {
+        try {
+            Pair input_heap = writeToWasmMemory(instanceRef, memoryName, input.toArray(new Value[0]));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+     */
 }

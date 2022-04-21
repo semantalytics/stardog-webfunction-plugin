@@ -16,7 +16,7 @@ public class TestIpfs extends AbstractStardogTest {
     @Test
     public void testToUpper() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 "prefix f: <ipfs://QmVx8jryTscgnbJoh8iuUYUiiGBeu4tr1i1A3PmCqcE5Vk/> " +
                 " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
 

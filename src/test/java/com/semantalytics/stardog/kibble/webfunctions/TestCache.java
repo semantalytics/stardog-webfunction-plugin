@@ -15,14 +15,14 @@ public class TestCache extends AbstractStardogTest {
 
     @Test
     public void testCacheList() {
-        final String cacheClearQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String cacheClearQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 " select ?result where { unnest(wf:cacheClear() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(cacheClearQuery).execute()) {
             aResult.stream().count();
         }
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 "prefix f: <file:rust/string/toupper/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
 
@@ -30,7 +30,7 @@ public class TestCache extends AbstractStardogTest {
             aResult.stream().count();
         }
 
-        final String listCacheQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String listCacheQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 " select ?result where { unnest(wf:cacheList() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(listCacheQuery).execute()) {
@@ -49,7 +49,7 @@ public class TestCache extends AbstractStardogTest {
     @Test
     public void testCacheClear() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 "prefix f: <file:rust/toupper/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
 
@@ -57,7 +57,7 @@ public class TestCache extends AbstractStardogTest {
             aResult.stream().count();
         }
 
-        final String listCacheQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String listCacheQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 " select ?result where { unnest(wf:cacheClear() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(listCacheQuery).execute()) {
@@ -70,14 +70,14 @@ public class TestCache extends AbstractStardogTest {
 
     @Test
     public void testCacheLoadFromUrl() {
-        final String cacheClearQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String cacheClearQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 " select ?result where { unnest(wf:cacheClear() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(cacheClearQuery).execute()) {
             aResult.stream().count();
         }
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 "prefix f: <file:rust/string/toupper/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { bind(wf:cacheLoad(f:toUpper) AS ?result) }";
 
@@ -85,7 +85,7 @@ public class TestCache extends AbstractStardogTest {
             aResult.stream().count();
         }
 
-        final String listCacheQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String listCacheQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 " select ?result where { unnest(wf:cacheList() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(listCacheQuery).execute()) {
@@ -103,14 +103,14 @@ public class TestCache extends AbstractStardogTest {
 
     @Test
     public void testCacheLoadFromLiteral() {
-        final String cacheClearQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String cacheClearQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 " select ?result where { unnest(wf:cacheClear() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(cacheClearQuery).execute()) {
             aResult.stream().count();
         }
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 "prefix f: <file:rust/string/toupper/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { bind(wf:cacheLoad(str(f:toUpper)) AS ?result) }";
 
@@ -118,7 +118,7 @@ public class TestCache extends AbstractStardogTest {
             aResult.stream().count();
         }
 
-        final String listCacheQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String listCacheQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 " select ?result where { unnest(wf:cacheList() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(listCacheQuery).execute()) {

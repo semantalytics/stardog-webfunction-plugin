@@ -1,9 +1,12 @@
 com.semantalytics.stardog.kibble.webfunctions.Call
+com.semantalytics.stardog.kibble.webfunctions.CallX
+com.semantalytics.stardog.kibble.webfunctions.Compose
 com.semantalytics.stardog.kibble.webfunctions.Doc
 com.semantalytics.stardog.kibble.webfunctions.CacheClear
 com.semantalytics.stardog.kibble.webfunctions.CacheLoad
 com.semantalytics.stardog.kibble.webfunctions.CacheRefresh
 com.semantalytics.stardog.kibble.webfunctions.CacheList
 com.semantalytics.stardog.kibble.webfunctions.PluginVersion
+com.semantalytics.stardog.kibble.webfunctions.PluginHash
 com.semantalytics.stardog.kibble.webfunctions.Get
-com.complexible.stardog.plan.aggregates.Agg
+com.semantalytics.stardog.kibble.webfunctions.Aggregate

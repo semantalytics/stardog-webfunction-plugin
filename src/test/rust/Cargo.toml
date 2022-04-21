@@ -1,10 +1,7 @@
-[env]
-CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
-
 [workspace]
 
 members = [
-    "function/math/constants/*"
+    "toupper",
 ]
 
 [profile.release]

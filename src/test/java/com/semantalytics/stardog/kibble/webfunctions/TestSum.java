@@ -16,7 +16,7 @@ public class TestSum extends AbstractStardogTest {
     @Test
     public void testSum() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
         " select (wf:agg(\"file:rust/aggregate/sum/target/wasm32-unknown-unknown/release/sum.wasm\", ?a) AS ?result)  WHERE { VALUES ?a { 1 2 3 1}} ";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
@@ -35,7 +35,7 @@ public class TestSum extends AbstractStardogTest {
     @Test
     public void testSumIpns() {
 
-    final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+    final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
             " prefix f: <ipns://wf.semantalytics.com/stardog/aggregate/> " +
             " select (wf:agg(f:sum, ?a) AS ?result)  WHERE { VALUES ?a { 1 2 3 1 }} ";
 

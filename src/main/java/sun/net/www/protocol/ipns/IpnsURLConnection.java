@@ -11,6 +11,8 @@ import static org.apache.commons.lang3.StringUtils.appendIfMissing;
 
 public class IpnsURLConnection extends URLConnection {
 
+    public static final String IPNS_DEFAULT_GATEWAY = "https://wf.semantalytics.com/ipns/";
+
     @Override
     public void connect() throws IOException {
 
@@ -21,7 +23,7 @@ public class IpnsURLConnection extends URLConnection {
     }
 
     private static URL toIpfsGatewayUrl(final URL url) throws MalformedURLException {
-        return new URL(appendIfMissing(System.getenv().getOrDefault("STARDOG_IPNS_GATEWAY", "https://wf.semantalytics.com/ipns/"), "/") + url.getAuthority() + url.getPath());
+        return new URL(appendIfMissing(System.getenv().getOrDefault("STARDOG_IPNS_GATEWAY", IPNS_DEFAULT_GATEWAY), "/") + url.getAuthority() + url.getPath());
     }
     
     @Override

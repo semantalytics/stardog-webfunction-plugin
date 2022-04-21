@@ -6,7 +6,7 @@
 
     <groupId>com.semantalytics.stardog</groupId>
     <artifactId>webfunction</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3-SNAPSHOT</version>
 
     <developers>
         <developer>
@@ -56,9 +56,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.caoccao.javet</groupId>
-            <artifactId>javet</artifactId>
-            <version>1.0.2</version>
+            <groupId>com.vdurmont</groupId>
+            <artifactId>semver4j</artifactId>
+            <version>3.1.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -128,10 +128,6 @@
             <name>Stardog Maven Repo</name>
             <url>https://maven.stardog.com</url>
         </repository>
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
-        </repository>
     </repositories>
 
     <build>
@@ -142,8 +138,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>8</source>
+                    <target>8</target>
                     <encoding>UTF-8</encoding>
                     <optimize>true</optimize>
                 </configuration>
@@ -155,6 +151,25 @@
                 <configuration>
                     <encoding>UTF-8</encoding>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.3.0</version>
+                <executions>
+                    <execution>
+                        <id>regex-property</id>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>shadedProjectVersion</name>
+                            <value>${project.version}</value>
+                            <regex>(\d+)\.(\d+)\.(\d+)-*(.*)</regex>
+                            <replacement>$1_$2_$3_$4</replacement>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -172,18 +187,27 @@
                             </excludes>
                         </filter>
                     </filters>
-                    <artifactSet>
-                        <excludes>
-                        </excludes>
-                    </artifactSet>
+                    <relocations>
+                        <relocation>
+                          <pattern>com.semantalytics.stardog.kibble.webfunctions</pattern>
+                          <shadedPattern>com.shaded.semantalytics.stardog.kibble.webfunctions.v${shadedProjectVersion}</shadedPattern>
+                          <excludes>
+                          </excludes>
+                        </relocation>
+                    </relocations>
                 </configuration>
                 <executions>
                     <execution>
-                        <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <transformers>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"/>
+                            </transformers>
                             <createDependencyReducedPom>true</createDependencyReducedPom>
                             <artifactSet>
                                 <excludes>
@@ -192,12 +216,6 @@
                                     <exclude>org.hamcrest:hamcrest-all</exclude>
                                 </excludes>
                             </artifactSet>
-                            <transformers>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"/>
-                            </transformers>
                         </configuration>
                     </execution>
                 </executions>
@@ -214,6 +232,24 @@
                     <includes>
                         <include>**/StardogExtensionsTestSuite.java</include>
                     </includes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.2</version>
+                <configuration>
+                    <archive>
+                        <index>true</index>
+                        <manifestSection>
+                            <name>${project.name}</name>
+                            <manifestEntries>
+                                <groupId>${project.groupId}</groupId>
+                                <artifactId>${project.artifactId}</artifactId>
+                                <version>${project.version}</version>
+                            </manifestEntries>
+                        </manifestSection>
+                    </archive>
                 </configuration>
             </plugin>
         </plugins>

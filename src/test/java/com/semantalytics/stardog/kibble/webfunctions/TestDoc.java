@@ -16,7 +16,7 @@ public class TestDoc extends AbstractStardogTest {
     @Test
     public void testDoc() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
                 "prefix f: <file:rust/doc-test/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { bind(wf:doc(f:doc) AS ?result) }";
 

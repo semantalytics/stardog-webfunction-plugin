@@ -16,9 +16,9 @@ public class TestToUpper extends AbstractStardogTest {
     @Test
     public void testToUpper() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
-                "prefix f: <file:rust/string/toupper/target/wasm32-unknown-unknown/release/> " +
-                " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
+                "prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where { bind(wf:call(str(f:toupper.wasm), \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -34,9 +34,172 @@ public class TestToUpper extends AbstractStardogTest {
     }
 
     @Test
+    public void testToUpperWithCallX() {
+
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
+                "prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where { bind(wf:callx(wf:compose(\"UCASE\", \"ENCODE_FOR_URI\"), \"star dog\") AS ?result) }";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
+    public void testCallXWithCompositeOfBuiltinAndWasm() {
+
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
+                "prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where { bind(wf:callx(wf:compose(str(f:toupper.wasm), \"ENCODE_FOR_URI\"), \"star dog\") AS ?result) }";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
+    public void testToUpperPf() {
+
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "1.0.3") +
+                "prefix f: <file:src/main/rust/string/to_upper/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where {" +
+                "?result wf:OUT_call_IN (\"file:src/test/rust/string/target/wasm32-unknown-unknown/release/to_upper_pf.wasm\" \"stardog\")" +
+                "}";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
+    public void testToUpperPfMultiple() {
+
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "1.0.3") +
+                "prefix f: <file:src/main/rust/string/to_upper/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where {" +
+                "?result wf:OUT_call_IN (\"file:src/test/rust/string/target/wasm32-unknown-unknown/release/to_upper_pf.wasm\" ?str)" +
+                " values ?str { \"what language do you think this is\" \"como estas\" \"bonjour\"}}";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("WHAT LANGUAGE DO YOU THINK THIS IS");
+
+            assertThat(aResult).hasNext();
+            aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("COMO ESTAS");
+
+            assertThat(aResult).hasNext();
+            aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("BONJOUR");
+
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+
+    @Test
+    public void langdetect() {
+
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "1.0.3") +
+                "prefix f: <file:src/main/rust/string/to_upper/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where {" +
+                "?result wf:OUT_call_IN (\"file:src/test/rust/string/target/wasm32-unknown-unknown/release/detect.wasm\" \"what language do you think this is\")" +
+                "}";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.toString()).isEqualTo("\"what language do you think this is\"@en");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
+    public void langdetectmultiple() {
+
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "1.0.3") +
+                "prefix f: <file:src/main/rust/string/to_upper/target/wasm32-unknown-unknown/release/> " +
+                " select ?result where {" +
+                "?result wf:OUT_call_IN (\"file:src/test/rust/string/target/wasm32-unknown-unknown/release/detect.wasm\" ?str)" +
+                " values ?str { \"what language do you think this is\" \"como estas\" \"bonjour\"}}";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.toString()).isEqualTo("\"what language do you think this is\"@en");
+
+
+            assertThat(aResult).hasNext();
+            aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.toString()).isEqualTo("\"como estas\"@es");
+
+            assertThat(aResult).hasNext();
+            aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.toString()).isEqualTo("\"bonjour\"@fr");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
     public void testLiteralUrl() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "1.0.3") +
                 " select ?result where { bind(wf:call(\"file:rust/string/toupper/target/wasm32-unknown-unknown/release/to_upper.wasm\", \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {

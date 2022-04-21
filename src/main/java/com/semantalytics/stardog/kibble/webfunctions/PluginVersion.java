@@ -4,15 +4,23 @@ import com.complexible.stardog.plan.filter.ExpressionVisitor;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.AbstractFunction;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
-import com.google.common.collect.Range;
 import com.stardog.stark.Value;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.CodeSource;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 
 import static com.stardog.stark.Values.*;
 
 public class PluginVersion extends AbstractFunction implements UserDefinedFunction {
 
+    private static final WebFunctionVocabulary names = WebFunctionVocabulary.pluginVersion;
+
     public PluginVersion() {
-        super(0, WebFunctionVocabulary.pluginVersion.toString());
+        super(0, names.getNames().toArray(new String[0]));
     }
 
     public PluginVersion(final PluginVersion pluginVersion) {
@@ -21,7 +29,7 @@ public class PluginVersion extends AbstractFunction implements UserDefinedFuncti
 
     @Override
     protected ValueOrError internalEvaluate(final Value... values) {
-        return ValueOrError.General.of(literal(Call.pluginVersion()));
+        return ValueOrError.General.of(literal(Version.PLUGIN_VERSION));
     }
 
 
@@ -34,5 +42,6 @@ public class PluginVersion extends AbstractFunction implements UserDefinedFuncti
     public void accept(final ExpressionVisitor expressionVisitor) {
         expressionVisitor.visit(this);
     }
+
 }
 
