@@ -11,7 +11,7 @@ import static org.apache.commons.lang3.StringUtils.*;
 public class IpfsURLConnection extends URLConnection {
 
     @Override
-    public void connect() throws IOException {
+    public void connect() {
 
     }
 

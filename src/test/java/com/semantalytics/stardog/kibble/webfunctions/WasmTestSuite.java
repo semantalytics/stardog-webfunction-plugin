@@ -1,4 +1,4 @@
-package com.semantalytics.stardog.kibble.array;
+package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.complexible.common.protocols.server.Server;
 import com.complexible.common.protocols.server.ServerException;
@@ -23,12 +23,26 @@ import java.net.InetSocketAddress;
 
 @RunWith(Suite.class)
 @SuiteClasses({
+    TestAggregate.class,
     TestCache.class,
     TestCall.class,
+    TestCompose.class,
     TestDoc.class,
-    TestToUpper.class,
+    TestFilter.class,
+    TestGet.class,
+    TestInCallOutPropertyFunction.class,
+    TestIpfs.class,
+    TestIpfsGet.class,
+    TestMap.class,
+    TestMappingDictionaryAdd.class,
+    TestMappingDictionaryGet.class,
+    TestMemoize.class,
+    TestOutCallInPropertyFunction.class,
+    TestPartial.class,
     TestPluginVersion.class,
-    TestSum.class,
+    TestReduce.class,
+    TestServiceQuery.class,
+    TestToUpper.class,
 })
 
 public class WasmTestSuite extends TestCase {

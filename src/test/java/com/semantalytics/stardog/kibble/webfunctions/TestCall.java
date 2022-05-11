@@ -4,6 +4,8 @@ import com.semantalytics.stardog.kibble.AbstractStardogTest;
 import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
 import com.stardog.stark.query.SelectQueryResult;
+import org.assertj.core.api.AssertionsForClassTypes;
+import org.assertj.core.api.AssertionsForInterfaceTypes;
 import org.junit.Test;
 
 import java.util.Optional;
@@ -13,32 +15,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestCall extends AbstractStardogTest {
 
-    @Test
-    public void testToUpper() {
-
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
-            "prefix f: <file:src/main/rust/string/to_upper/target/wasm32-unknown-unknown/release/> " +
-            " select ?result where { bind(wf:call(str(f:to_upper.wasm), \"stardog\") AS ?result) }";
-
-        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
-
-            assertThat(aResult).hasNext();
-            final Optional<Value> aPossibleValue = aResult.next().value("result");
-            assertThat(aPossibleValue).isPresent();
-            final Value aValue = aPossibleValue.get();
-            assertThat(assertStringLiteral(aValue));
-            final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("STARDOG");
-            assertThat(aResult).isExhausted();
-        }
-    }
+    final String queryHeader = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
+            " prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> ";
 
     @Test
-    public void testDictionaryMapperAdd() {
+    public void testToUpperConstant() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
-                "prefix f: <file:rust/test-mapping-dictionary-add/target/wasm32-unknown-unknown/release/> " +
-                " select ?result where { unnest(wf:call(f:testMappingDictionaryAdd, \"stardog\") AS ?result) }";
+        final String aQuery = queryHeader +
+            " SELECT ?result WHERE { BIND(wf:call(STR(f:to_upper.wasm), \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -54,11 +38,29 @@ public class TestCall extends AbstractStardogTest {
     }
 
     @Test
-    public void testDictionaryMapperGet() {
+    public void testBuiltIn() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
-                "prefix f: <file:rust/test-mapping-dictionary-get/target/wasm32-unknown-unknown/release/> " +
-                "select (wf:call(f:testMappingDictionaryGet, set(?a)) AS ?result) WHERE { values ?a {\"stardog\"} }";
+        final String aQuery = queryHeader +
+                " SELECT ?result WHERE { BIND(wf:call(\"PI\") AS ?result) }";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("3.141592653589793");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
+    public void testToUpperVar() {
+
+        final String aQuery = queryHeader +
+                " SELECT ?result WHERE { VALUEs ?str { \"stardog\" } BIND(wf:call(STR(f:to_upper.wasm), ?str) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -73,11 +75,11 @@ public class TestCall extends AbstractStardogTest {
         }
     }
 
-    public void testDictionaryMapperGetConstant() {
+    @Test
+    public void testToUpperEmptyString() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
-                "prefix f: <file:rust/test-mapping-dictionary-get/target/wasm32-unknown-unknown/release/> " +
-                "select (wf:call(f:testMappingDictionaryGet, ?al) AS ?result) WHERE { bind(set(\"stardog\") as ?al) }";
+        final String aQuery = queryHeader +
+                " select ?result where { bind(wf:call(str(f:to_upper.wasm), \"\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -87,10 +89,53 @@ public class TestCall extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aLiteral.label()).isEqualTo("");
             assertThat(aResult).isExhausted();
         }
     }
 
+    @Test
+    public void testIriFunction() {
 
+        final String aQuery = queryHeader +
+                " SELECT ?result WHERE { BIND(func:call(string:upperCase, \"Hello world\" ) AS ?result) }";
+
+        try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            AssertionsForInterfaceTypes.assertThat(aResult).hasNext().withFailMessage("Should have a result");
+            Optional<Literal> aPossibleLiteral = aResult.next().literal("result");
+            AssertionsForClassTypes.assertThat(aPossibleLiteral).isPresent();
+            AssertionsForClassTypes.assertThat(aPossibleLiteral.get().label()).isEqualTo("HELLO WORLD");
+        }
+    }
+
+    @Test
+    public void testEcho1x1x1() {
+
+        final String aQuery = queryHeader +
+                " SELECT ?result WHERE { BIND(wf:call(str(f:echo1x1x1.wasm), \"Hello world\" ) AS ?result) }";
+
+        try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            AssertionsForInterfaceTypes.assertThat(aResult).hasNext().withFailMessage("Should have a result");
+            Optional<Literal> aPossibleLiteral = aResult.next().literal("result");
+            AssertionsForClassTypes.assertThat(aPossibleLiteral).isPresent();
+            AssertionsForClassTypes.assertThat(aPossibleLiteral.get().label()).isEqualTo("Hello world");
+        }
+    }
+
+    @Test
+    public void testNestedExpression() {
+
+        final String aQuery = queryHeader +
+                " SELECT ?result WHERE { BIND(wf:call(str(f:to_upper.wasm), wf:call(str(f:echo1x1x1.wasm), \"Hello world\" )) AS ?result) }";
+
+        try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            AssertionsForInterfaceTypes.assertThat(aResult).hasNext().withFailMessage("Should have a result");
+            Optional<Literal> aPossibleLiteral = aResult.next().literal("result");
+            AssertionsForClassTypes.assertThat(aPossibleLiteral).isPresent();
+            AssertionsForClassTypes.assertThat(aPossibleLiteral.get().label()).isEqualTo("HELLO WORLD");
+        }
+    }
 }

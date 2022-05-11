@@ -1,7 +1,21 @@
 [workspace]
 
 members = [
-    "toupper",
+    "aggregate/sum",
+    "function/concat",
+    "function/const0x1x1",
+    "function/const0x1x2",
+    "function/const0x2x1",
+    "function/const0x2x2",
+    "function/doc_test",
+    "function/echo1x1x1",
+    "function/echo1x2x1",
+    "function/echo2x1x1",
+    "function/echo2x2x1",
+    "function/mapping_dictionary_add",
+    "function/mapping_dictionary_get",
+    "function/array_of",
+    "function/to_upper",
 ]
 
 [profile.release]

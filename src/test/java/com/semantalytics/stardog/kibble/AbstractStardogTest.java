@@ -39,6 +39,7 @@ public abstract class AbstractStardogTest {
            adminConnection = AdminConnectionConfiguration.toEmbeddedServer()
                 .credentials("admin", "admin")
                 .connect();
+           adminConnection.setProperty("ipfs.gateway", "http://did.this.get.set");
        } catch(StardogException e) {
 
 

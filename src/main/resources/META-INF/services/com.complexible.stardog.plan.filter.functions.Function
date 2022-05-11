@@ -1,5 +1,4 @@
 com.semantalytics.stardog.kibble.webfunctions.Call
-com.semantalytics.stardog.kibble.webfunctions.CallX
 com.semantalytics.stardog.kibble.webfunctions.Compose
 com.semantalytics.stardog.kibble.webfunctions.Doc
 com.semantalytics.stardog.kibble.webfunctions.CacheClear

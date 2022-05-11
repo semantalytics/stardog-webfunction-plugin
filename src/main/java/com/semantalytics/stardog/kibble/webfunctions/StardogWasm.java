@@ -29,6 +29,7 @@ import io.github.kawamuray.wasmtime.Val;
 import io.github.kawamuray.wasmtime.Module;
 import io.github.kawamuray.wasmtime.WasmFunctions;
 import io.github.kawamuray.wasmtime.wasi.WasiCtx;
+import io.github.kawamuray.wasmtime.wasi.WasiCtxBuilder;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
@@ -77,7 +78,7 @@ public class StardogWasm {
 
     public static Store<Void> store = Store.withoutData();
 
-    static Instance initWasm(final URL wasmUrl, MappingDictionary mappingDictionary) throws ExecutionException {
+    public static Instance initWasm(final URL wasmUrl, MappingDictionary mappingDictionary) throws ExecutionException {
         final AtomicReference<Instance> instanceRef = new AtomicReference<>();
         try(final Engine engine = StardogWasm.store.engine()) {
             final Module module = StardogWasm.loadingCache.get(wasmUrl);
@@ -99,12 +100,12 @@ public class StardogWasm {
             final Func mappingDictionaryAddFunc = WasmFunctions.wrap(StardogWasm.store, I32, I64, (addr) ->
                     mappingDictionary.add(StardogWasm.readFromWasmMemory(instanceRef, "memory", addr)[0]));
 
+
             try (Linker linker = new Linker(engine)) {
                 linker.define("env", StardogWasm.WASM_FUNCTION_MAPPING_DICTIONARY_ADD, Extern.fromFunc(mappingDictionaryAddFunc));
                 linker.define("env", StardogWasm.WASM_FUNCTION_MAPPING_DICTIONARY_GET, Extern.fromFunc(mappingDictionaryGetFunc));
                 linker.module(StardogWasm.store, "", module);
 
-                WasiCtx.addToLinker(linker);
                 instanceRef.set(linker.instantiate(StardogWasm.store, module));
             }
         }

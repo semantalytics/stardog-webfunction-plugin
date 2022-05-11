@@ -1,2 +1,2 @@
-com.semantalytics.stardog.kibble.webfunctions.WebFunctionOutCallIn
-com.semantalytics.stardog.kibble.webfunctions.WebFunctionInCallOut
+com.semantalytics.stardog.kibble.webfunctions.propertyfunction.outcallin.WebFunctionOutCallInPropertyFunction
+com.semantalytics.stardog.kibble.webfunctions.propertyfunction.incallout.WebFunctionInCallOutPropertyFunction

@@ -16,7 +16,7 @@ public class TestPluginVersion extends AbstractStardogTest {
     @Test
     public void testPluginVersion() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "latest") +
                 " select ?result where { bind(wf:pluginVersion() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
@@ -27,7 +27,26 @@ public class TestPluginVersion extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal) aValue);
-            assertThat((aLiteral.label())).isEqualTo(PluginHash.hash);
+            assertThat((aLiteral.label())).isEqualTo("0.0.0");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
+    public void testVersionedName() {
+
+        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
+                " select ?result where { bind(wf:pluginVersion() AS ?result) }";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal) aValue);
+            assertThat((aLiteral.label())).isEqualTo("0.0.0");
             assertThat(aResult).isExhausted();
         }
     }
