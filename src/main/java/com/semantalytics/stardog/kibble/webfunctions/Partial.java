@@ -8,6 +8,7 @@ import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
 import com.google.common.collect.Lists;
 import com.stardog.stark.BNode;
+import com.stardog.stark.Value;
 import com.stardog.stark.Values;
 
 import java.util.HashMap;
@@ -20,7 +21,11 @@ public final class Partial extends AbstractExpression implements UserDefinedFunc
 
     private static final WebFunctionVocabulary names = WebFunctionVocabulary.partial;
 
-    static Map<String, List<Expression>> partialMap = new HashMap<>();
+    static Map<String, List<Value>> partialMap = new HashMap<>();
+
+    public Partial() {
+        super(new Expression[0]);
+    }
 
     public Partial(final Partial partial) {
         super(partial);
@@ -38,12 +43,19 @@ public final class Partial extends AbstractExpression implements UserDefinedFunc
 
     @Override
     public ValueOrError evaluate(final ValueSolution valueSolution) {
-
-        final BNode partialFunctionName = Values.bnode();
-
-        partialMap.put(Values.bnode().id(), getArgs().stream().collect(toList()));
-
-        return ValueOrError.General.of(partialFunctionName);
+        final BNode compositeFunctionName = Values.bnode();
+        if(getArgs().size() >= 2) {
+            List<ValueOrError> argsValueOrError = getArgs().stream().map(e -> e.evaluate(valueSolution)).collect(toList());
+            if (argsValueOrError.stream().noneMatch(ValueOrError::isError)) {
+                List<Value> values = argsValueOrError.stream().map(ValueOrError::value).collect(toList());
+                partialMap.put(compositeFunctionName.id(), values);
+                return ValueOrError.General.of(compositeFunctionName);
+            } else {
+                return ValueOrError.Error;
+            }
+        } else {
+            return ValueOrError.Error;
+        }
     }
 
     @Override
@@ -58,6 +70,6 @@ public final class Partial extends AbstractExpression implements UserDefinedFunc
 
     @Override
     public void initialize() {
-        partialMap = new HashMap<>();
+        partialMap.clear();
     }
 }

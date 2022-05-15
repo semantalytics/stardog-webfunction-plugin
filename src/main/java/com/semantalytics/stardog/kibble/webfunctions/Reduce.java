@@ -12,6 +12,7 @@ import com.stardog.stark.Literal;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertArrayLiteral;
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertLiteral;
@@ -20,6 +21,10 @@ import static java.util.stream.Collectors.toList;
 public final class Reduce extends AbstractExpression implements UserDefinedFunction {
 
     private static final WebFunctionVocabulary names = WebFunctionVocabulary.reduce;
+
+    public Reduce() {
+        super(new Expression[0]);
+    }
 
     private Reduce(final Reduce reduce) {
         super(reduce);
@@ -47,7 +52,6 @@ public final class Reduce extends AbstractExpression implements UserDefinedFunct
 
     @Override
     public ValueOrError evaluate(ValueSolution valueSolution) {
-
         if(getArgs().size() == 2) {
             final ValueOrError firstArgValueOrError = getFirstArg().evaluate(valueSolution);
             if(!firstArgValueOrError.isError()) {

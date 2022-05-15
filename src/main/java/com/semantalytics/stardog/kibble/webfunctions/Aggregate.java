@@ -46,7 +46,9 @@ public class Aggregate extends WebFunctionAbstractAggregate implements UserDefin
 
     @Override
     public void reset() {
-        instance.close();
+        if(instance != null) {
+            instance.close();
+        }
         instance = null;
     }
 
@@ -56,8 +58,6 @@ public class Aggregate extends WebFunctionAbstractAggregate implements UserDefin
 
     public Aggregate(final Aggregate aggregate) {
         super(aggregate);
-        this.instance = aggregate.instance;
-        //TODO ^^^ this might not be ok
     }
 
     @Override
@@ -69,11 +69,12 @@ public class Aggregate extends WebFunctionAbstractAggregate implements UserDefin
 
             try {
                 final URL wasmUrl = StardogWasm.getWasmUrl(values[0]);
-                final Instance instance = initWasm(wasmUrl, valueSolution.getDictionary());
-
+                if(instance == null) {
+                    instance = StardogWasm.initWasm(wasmUrl, valueSolution.getDictionary());
+                }
                     try {
                         final AtomicReference<Instance> instanceRef = new AtomicReference<>(instance);
-                        final Pair<Integer, Integer> input = StardogWasm.writeToWasmMemory(instanceRef, "memory", Arrays.stream(values).skip(1).toArray(Value[]::new));
+                        final Pair<Integer, Integer> input = StardogWasm.writeToWasmMemoryWithMultiplicity(instanceRef, "memory", Arrays.stream(values).skip(1).toArray(Value[]::new), valueSolution.getMultiplicity());
 
                         try (final Func evaluateFunction = instance.getFunc(StardogWasm.store, StardogWasm.WASM_FUNCTION_AGGREGATE).get()) {
                             final Integer output_pointer = evaluateFunction.call(StardogWasm.store, Val.fromI32(input.first))[0].i32();
@@ -136,44 +137,5 @@ public class Aggregate extends WebFunctionAbstractAggregate implements UserDefin
     @Override
     public com.complexible.stardog.plan.aggregates.Aggregate copy() {
         return new Aggregate(this);
-    }
-
-    private Instance initWasm(final URL wasmUrl, MappingDictionary mappingDictionary) throws ExecutionException {
-        if(instance == null) {
-            final AtomicReference<Instance> instanceRef = new AtomicReference<>();
-            try (final Engine engine = StardogWasm.store.engine()) {
-                final Module module = StardogWasm.loadingCache.get(wasmUrl);
-
-                final Func mappingDictionaryGetFunc = WasmFunctions.wrap(StardogWasm.store, I64, I32, (id) -> {
-                    final Value value = mappingDictionary.getValue(id);
-
-                    Pair<Integer, Integer> buf = null;
-                    //TODO fix this. possible NPE
-                    try {
-                        buf = StardogWasm.writeToWasmMemory(instanceRef, "memory", new Value[]{value});
-                    } catch (IOException e) {
-                        //TODO ???
-                    }
-
-                    return buf.first;
-                });
-
-                final Func mappingDictionaryAddFunc = WasmFunctions.wrap(StardogWasm.store, I32, I64, (addr) ->
-                        mappingDictionary.add(StardogWasm.readFromWasmMemory(instanceRef, "memory", addr)[0]));
-
-                try (Linker linker = new Linker(engine)) {
-                    linker.define("env", StardogWasm.WASM_FUNCTION_MAPPING_DICTIONARY_ADD, Extern.fromFunc(mappingDictionaryAddFunc));
-                    linker.define("env", StardogWasm.WASM_FUNCTION_MAPPING_DICTIONARY_GET, Extern.fromFunc(mappingDictionaryGetFunc));
-                    linker.module(StardogWasm.store, "", module);
-
-                    WasiCtx.addToLinker(linker);
-                    instanceRef.set(linker.instantiate(StardogWasm.store, module));
-                }
-            }
-            this.instance = instanceRef.get();
-            return instanceRef.get();
-        } else {
-            return instance;
-        }
     }
 }

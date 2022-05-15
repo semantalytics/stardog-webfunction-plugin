@@ -16,5 +16,4 @@ pub extern fn evaluate(subject: *mut c_char) -> *mut c_char {
     }).to_string().into_bytes();
 
     unsafe { CString::from_vec_unchecked(result) }.into_raw()
-
 }

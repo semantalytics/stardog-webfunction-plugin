@@ -5,12 +5,10 @@ use serde_json::json;
 pub use stardog_function::*;
 
 #[no_mangle]
-pub extern fn evaluate(_subject: *mut c_char) -> *mut c_char {
-
-    let result = json!({
+pub extern "C" fn evaluate(_subject: *mut c_char) -> *mut c_char {
+    let sparql_query_result = json!({
       "head": {"vars":["value_0"]}, "results":{"bindings":[{"value_0":{"type":"literal","value": "constant0"}}]}
-    }).to_string().into_bytes();
+    }).to_string();
 
-    unsafe { CString::from_vec_unchecked(result) }.into_raw()
-
+    return unsafe { CString::from_vec_unchecked(sparql_query_result.into_bytes()) }.into_raw();
 }

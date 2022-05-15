@@ -1,25 +1,26 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
-import com.complexible.stardog.plan.filter.ExpressionVisitor;
+import com.complexible.stardog.plan.filter.*;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
-import com.complexible.stardog.plan.filter.functions.AbstractFunction;
+import com.complexible.stardog.plan.filter.functions.FunctionRegistry;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Queues;
-import com.google.common.collect.Range;
 import com.stardog.stark.*;
+import org.apache.commons.math3.analysis.function.Exp;
 
 import java.util.*;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-public final class Compose extends AbstractFunction implements UserDefinedFunction {
+import static java.util.stream.Collectors.*;
+
+public final class Compose extends AbstractExpression implements UserDefinedFunction {
 
     private static final WebFunctionVocabulary names = WebFunctionVocabulary.compose;
 
-    static Map<String, Queue<String>> compositionMap = new HashMap<>();
+    static Map<String, List<Value>> compositionMap = new HashMap<>();
 
     public Compose() {
-        super(Range.atLeast(2), names.getNames().toArray(new String[0]));
+        super(new Expression[0]);
     }
 
     public Compose(final Compose compose) {
@@ -27,26 +28,25 @@ public final class Compose extends AbstractFunction implements UserDefinedFuncti
     }
 
     @Override
-    protected ValueOrError internalEvaluate(Value... values) {
+    public ValueOrError evaluate(final ValueSolution valueSolution) {
 
         final BNode compositeFunctionName = Values.bnode();
-        final ArrayDeque<String> functionComposition = new ArrayDeque<>();
-
-        for(final Value value : values) {
-            final String functionName;
-            if (assertLiteral(values[0])) {
-                functionName = ((Literal) value).label();
-            } else if (values[0] instanceof IRI) {
-                functionName = value.toString();
+        if(getArgs().size() >= 2) {
+            List<ValueOrError> argsValueOrError = getArgs().stream().map(e -> e.evaluate(valueSolution)).collect(toList());
+            if (argsValueOrError.stream().noneMatch(ValueOrError::isError)) {
+                if(argsValueOrError.stream().map(ValueOrError::value).allMatch(v -> v instanceof IRI || (v instanceof Literal && EvalUtil.isStringLiteral((Literal)v)) || v instanceof BNode)) {
+                    List<Value> values = argsValueOrError.stream().map(ValueOrError::value).collect(toList());
+                    compositionMap.put(compositeFunctionName.id(), values);
+                    return ValueOrError.General.of(compositeFunctionName);
+                } else {
+                    return ValueOrError.Error;
+                }
             } else {
                 return ValueOrError.Error;
             }
-            functionComposition.push(functionName);
+        } else {
+            return ValueOrError.Error;
         }
-
-        compositionMap.put(compositeFunctionName.id(), functionComposition);
-
-        return ValueOrError.General.of(compositeFunctionName);
     }
 
     @Override
@@ -62,5 +62,21 @@ public final class Compose extends AbstractFunction implements UserDefinedFuncti
     @Override
     public void initialize() {
         compositionMap = new HashMap<>();
+    }
+
+    @Override
+    public String getName() {
+        return names.getImmutableName();
+    }
+
+    @Override
+    public List<String> getNames() {
+        return names.getNames();
+    }
+
+
+    @Override
+    public String toString() {
+        return names.name();
     }
 }

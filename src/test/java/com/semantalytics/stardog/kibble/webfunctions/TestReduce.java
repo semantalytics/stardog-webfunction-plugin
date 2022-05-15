@@ -12,13 +12,15 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 public class TestReduce extends AbstractStardogTest {
 
     final String queryHeader = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
-            " prefix f: <file:src/main/rust/function/target/wasm32-unknown-unknown/release/> ";
+            " prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> ";
+
+    //TODO should take either array or list of args if first arg isn't array
 
     @Test
     public void sumOverThreeInts() {
 
         final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(func:reduce(\"http://www.w3.org/2005/xpath-functions#numeric-add\", array:of(2, 2, 2)) AS ?result) }";
+                " SELECT ?result WHERE { BIND(wf:reduce(\"http://www.w3.org/2005/xpath-functions#numeric-add\", wf:call(str(f:array_of.wasm), 2, 2, 2)) AS ?result) }";
 
         try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -33,7 +35,7 @@ public class TestReduce extends AbstractStardogTest {
     public void sumOverTwoInts() {
 
         final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(func:reduce(\"http://www.w3.org/2005/xpath-functions#numeric-add\", array:of(2, 2)) AS ?result) }";
+                " SELECT ?result WHERE { BIND(wf:reduce(\"http://www.w3.org/2005/xpath-functions#numeric-add\", wf:call(str(f:array_of.wasm), 2, 2)) AS ?result) }";
 
         try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -48,7 +50,7 @@ public class TestReduce extends AbstractStardogTest {
     public void tooFewArrayLiterals() {
 
         final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(func:reduce(\"http://www.w3.org/2005/xpath-functions#numeric-add\", array:of(2)) AS ?result) }";
+                " SELECT ?result WHERE { BIND(wf:reduce(\"http://www.w3.org/2005/xpath-functions#numeric-add\", call(str(f:array_of.wasm), 2)) AS ?result) }";
 
         try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -63,7 +65,7 @@ public class TestReduce extends AbstractStardogTest {
     public void wrongTypeFirstArg() {
 
         final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(func:reduce(1, array:of(2, 2)) AS ?result) }";
+                " SELECT ?result WHERE { BIND(wf:reduce(1, wf:call(str(f:array_of.wasm), 2, 2)) AS ?result) }";
 
         try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -78,7 +80,7 @@ public class TestReduce extends AbstractStardogTest {
     public void wrongTypeSecondArg() {
 
         final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(func:reduce(\"http://www.w3.org/2005/xpath-functions#numeric-add\", 2) AS ?result) }";
+                " SELECT ?result WHERE { BIND(wf:reduce(\"http://www.w3.org/2005/xpath-functions#numeric-add\", 2) AS ?result) }";
 
         try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 

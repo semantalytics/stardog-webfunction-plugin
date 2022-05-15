@@ -12,20 +12,20 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 public class TestPartial extends AbstractStardogTest {
 
     final String queryHeader = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
-            " prefix f: <file:src/main/rust/function/target/wasm32-unknown-unknown/release/> ";
+            " prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> ";
 
     @Test
     public void testPartial() {
 
         final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(func:call(func:partial(string:joinWith, \":\"), \"Hello\", \"world\") AS ?result) }";
+                " SELECT ?result WHERE { BIND(wf:call(wf:partial(str(f:concat.wasm), wf:var, \"dog\"), \"star\") AS ?result) }";
 
         try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
             assertThat(aResult).hasNext().withFailMessage("Should have a result");
             Optional<Literal> aPossibleLiteral = aResult.next().literal("result");
             assertThat(aPossibleLiteral).isPresent();
-            assertThat(aPossibleLiteral.get().label()).isEqualTo("Hello:world");
+            assertThat(aPossibleLiteral.get().label()).isEqualTo("stardog");
         }
     }
 }

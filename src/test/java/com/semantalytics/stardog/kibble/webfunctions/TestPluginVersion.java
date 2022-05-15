@@ -13,10 +13,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestPluginVersion extends AbstractStardogTest {
 
+    final String queryHeader = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
+            " prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> ";
+
     @Test
     public void testPluginVersion() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "latest") +
+        final String aQuery = queryHeader +
                 " select ?result where { bind(wf:pluginVersion() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
@@ -35,7 +38,7 @@ public class TestPluginVersion extends AbstractStardogTest {
     @Test
     public void testVersionedName() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
+        final String aQuery = queryHeader +
                 " select ?result where { bind(wf:pluginVersion() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {

@@ -8,6 +8,7 @@ import com.stardog.stark.query.SelectQueryResult;
 import org.junit.Test;
 
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertStringLiteral;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,7 +22,7 @@ public class TestOutCallInPropertyFunction extends AbstractStardogTest {
     public void testToUpperpfOutCallIn() {
 
         final String aQuery = queryHeader +
-                " select ?result where {" +
+                " SELECT ?result WHERE {" +
                 "?result wf:OUT_call_IN (\"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper_pf.wasm\" \"stardog\")" +
                 "}";
 
@@ -38,7 +39,7 @@ public class TestOutCallInPropertyFunction extends AbstractStardogTest {
         }
     }
 
-    @Test
+    @Test(expected = ExecutionException.class)
     public void testConstantOutputShouldFail() {
 
         final String aQuery = queryHeader +

@@ -2,10 +2,8 @@ package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.complexible.common.base.Pair;
 import com.complexible.common.rdf.model.ArrayLiteral;
-import com.complexible.stardog.plan.filter.AbstractExpression;
-import com.complexible.stardog.plan.filter.Expression;
-import com.complexible.stardog.plan.filter.ExpressionVisitor;
-import com.complexible.stardog.plan.filter.ValueSolution;
+import com.complexible.stardog.plan.filter.*;
+import com.complexible.stardog.plan.filter.expr.Constant;
 import com.complexible.stardog.plan.filter.expr.ConstantImpl;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.FunctionRegistry;
@@ -21,11 +19,10 @@ import io.github.kawamuray.wasmtime.Val;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertLiteral;
 import static com.stardog.stark.Values.iri;
@@ -75,42 +72,31 @@ public final class Call extends AbstractExpression implements UserDefinedFunctio
 
                 Expression function = null;
                 try {
-                    //TODO compose should probably use wf:var like partials to but are just limited to one var. Default to first arg?
                     if (Compose.compositionMap.containsKey(functionName)) {
-                        for (final String compositeFunction : Compose.compositionMap.get(functionName)) {
-                            if (function == null) {
-                                try {
-                                    function = FunctionRegistry.Instance.get(compositeFunction, functionArgs, null);
-                                } catch (UnsupportedOperationException e) {
-                                    function = FunctionRegistry.Instance.get(this.getName(), functionArgs, null);
+                        List<Expression> compositeFunctions = Compose.compositionMap.get(functionName).stream().map(Expressions::constant).collect(toList());
+                        Collections.reverse(compositeFunctions);
+                        List<Expression> initial = Stream.concat(Stream.of(compositeFunctions.get(0)), functionArgs.stream()).collect(toList());
+                        function = compositeFunctions.stream().skip(1).reduce(FunctionRegistry.Instance.get(WebFunctionVocabulary.call.getImmutableName(), initial, null), (e1, e2) ->
+                                FunctionRegistry.Instance.get(WebFunctionVocabulary.call.getImmutableName(), Arrays.asList(e2, e1), null));
+
+
+                    } else if (Partial.partialMap.containsKey(functionName)) {
+                        final List<Expression> partialArgs = Partial.partialMap.get(functionName).stream().map(Expressions::constant).collect(toList());
+                        ListIterator<Expression> f = functionArgs.listIterator();
+                        partialArgs.replaceAll(e -> {
+                            if(WebFunctionVocabulary.var.getNames().contains(e.evaluate(valueSolution).value().toString()))  {
+                                if(f.hasNext()) {
+                                    return f.next();
+                                } else {
+                                    return e;
                                 }
                             } else {
-                                try {
-                                    function = FunctionRegistry.Instance.get(compositeFunction, singletonList(function), null);
-                                } catch (UnsupportedOperationException e) {
-                                    final List<Expression> args = Lists.newArrayList();
-                                    args.add(new ConstantImpl(Values.literal(compositeFunction)));
-                                    args.add(function);
-                                    function = FunctionRegistry.Instance.get(this.getName(), args, null);
-                                }
-                        }
-                        }
-                    } else if (Partial.partialMap.containsKey(functionName)) {
-                        final List<Expression> partialArgs = Partial.partialMap.get(functionName);
-                        final Iterator<Expression> functionArgsIterator = functionArgs.listIterator();
-                        final List<Expression> completeArgs = partialArgs.stream().map(expression -> {
-                            if(!expression.evaluate(valueSolution).isError() && WebFunctionVocabulary.var.getNames().contains(expression.evaluate(valueSolution).value().toString())) {
-                                if (functionArgsIterator.hasNext()) {
-                                    return functionArgsIterator.next();
-                                }
+                                return e;
                             }
-                            return expression;
-                        }).collect(toList());
-                        try {
-                            function = FunctionRegistry.Instance.get(completeArgs.get(0).toString(), completeArgs.stream().skip(1).collect(toList()), null);
-                        } catch (UnsupportedOperationException e) {
-                            function = FunctionRegistry.Instance.get(this.getName(), partialArgs, null);
-                        }
+                        });
+                        f.forEachRemaining(partialArgs::add);
+
+                        function = FunctionRegistry.Instance.get(WebFunctionVocabulary.call.getImmutableName(), partialArgs, null);
                     } else {
                         try {
                             function = FunctionRegistry.Instance.get(functionName, functionArgs, null);

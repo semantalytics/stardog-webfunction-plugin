@@ -95,21 +95,6 @@ public class TestCall extends AbstractStardogTest {
     }
 
     @Test
-    public void testIriFunction() {
-
-        final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(func:call(string:upperCase, \"Hello world\" ) AS ?result) }";
-
-        try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
-
-            AssertionsForInterfaceTypes.assertThat(aResult).hasNext().withFailMessage("Should have a result");
-            Optional<Literal> aPossibleLiteral = aResult.next().literal("result");
-            AssertionsForClassTypes.assertThat(aPossibleLiteral).isPresent();
-            AssertionsForClassTypes.assertThat(aPossibleLiteral.get().label()).isEqualTo("HELLO WORLD");
-        }
-    }
-
-    @Test
     public void testEcho1x1x1() {
 
         final String aQuery = queryHeader +

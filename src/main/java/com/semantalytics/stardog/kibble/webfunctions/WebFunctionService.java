@@ -9,13 +9,18 @@ import com.complexible.stardog.plan.QueryTerm;
 import com.complexible.stardog.plan.eval.service.*;
 import com.complexible.stardog.plan.filter.Expressions;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 import com.stardog.stark.IRI;
 import com.stardog.stark.Value;
+import com.stardog.stark.Values;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import static com.stardog.stark.Values.iri;
+import static java.util.stream.Collectors.toList;
 
 final class WebFunctionService extends SingleQueryService {
 
@@ -26,27 +31,12 @@ final class WebFunctionService extends SingleQueryService {
         return WebFunctionVocabulary.service.getNames().contains(theIRI.toString());
     }
 
-    /*
-    example
-
-    prefix str: <wf+http://wf.semantaltyics.com/stardog/function/string/>
-
-    SERVICE <tag:semantalytics:webfunction> {
-        []          wf:call f:toUpper;
-                    wf:args ("star" "dog);
-                    wf:result ?result
-    }
-
-    SERVICE <tag:semantalytics:webfunction> { [ wf:call f:toUpper; wf:args ("star" "dog); wf:results ?result ] .}
-     */
-
-
     @Override
     public ServiceQuery createQuery(final IRI theIRI, final PlanNode body) {
         return createWebFunctionQuery(body);
     }
 
-    public static PlanNodeBodyServiceQuery createWebFunctionQuery(PlanNode theBody) {
+    public static PlanNodeBodyServiceQuery createWebFunctionQuery(final PlanNode theBody) {
         Map<QueryTerm, ServiceParameters> subjToParams = ServiceParameterUtils.build(theBody);
         Preconditions.checkArgument(subjToParams.size() == 1, "Parameters must correspond to a single subject");
         ServiceParameters params = subjToParams.values().iterator().next();
@@ -66,13 +56,32 @@ final class WebFunctionService extends SingleQueryService {
     }
 
     private static class WebFunctionServiceParamValidator extends Validator {
+
+        private final ServiceParameters mParameters;
+
         WebFunctionServiceParamValidator(ServiceParameters theParameters) {
             super(theParameters);
+            this.mParameters = theParameters;
         }
 
         @Override
         public void validate() {
-            //TODO implement this
+            //TODO
+            Preconditions.checkArgument(WebFunctionVocabulary.call.getNames().stream().map(Values::iri).filter(iri -> mParameters.contains(iri)).count() == 1);
+            Preconditions.checkArgument(WebFunctionVocabulary.args.getNames().stream().map(Values::iri).filter(iri -> mParameters.contains(iri)).count() <= 1);
+            Preconditions.checkArgument(WebFunctionVocabulary.result.getNames().stream().map(Values::iri).filter(iri -> mParameters.contains(iri)).count() == 1);
+            Set<IRI> allParameters = Sets.newHashSet(mParameters.predicates());
+            allParameters.removeAll(WebFunctionVocabulary.call.getNames().stream().map(Values::iri).collect(toList()));
+            allParameters.removeAll(WebFunctionVocabulary.args.getNames().stream().map(Values::iri).collect(toList()));
+            allParameters.removeAll(WebFunctionVocabulary.result.getNames().stream().map(Values::iri).collect(toList()));
+            Preconditions.checkArgument(allParameters.isEmpty());
+            IRI callParameter = mParameters.predicates().stream().filter(iri -> WebFunctionVocabulary.call.getNames().stream().map(Values::iri).collect(toList()).contains(iri)).findFirst().get();
+            IRI resultParameter = mParameters.predicates().stream().filter(v -> WebFunctionVocabulary.result.getNames().stream().map(Values::iri).collect(toList()).contains(v)).findFirst().get();
+            Preconditions.checkArgument(mParameters.get(callParameter).size() == 1 && mParameters.get(callParameter).get(0).isConstant());
+            Preconditions.checkArgument(mParameters.get(resultParameter).size() >= 1);
+            mParameters.get(resultParameter).stream().forEach(QueryTerm::isVariable);
+
+            //optional args with anything
         }
     }
 }

@@ -26,8 +26,7 @@ public class TestCache extends AbstractStardogTest {
         }
 
         final String aQuery = queryHeader +
-                "prefix f: <file:rust/string/toupper/target/wasm32-unknown-unknown/release/> " +
-                " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
+                " select ?result where { bind(wf:call(str(f:to_upper.wasm), \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
             aResult.stream().count();
@@ -44,7 +43,7 @@ public class TestCache extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("file:rust/string/toupper/target/wasm32-unknown-unknown/release/toUpper/1");
+            assertThat(aLiteral.label()).isEqualTo("file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper.wasm");
             assertThat(aResult).isExhausted();
         }
     }
@@ -53,14 +52,13 @@ public class TestCache extends AbstractStardogTest {
     public void testCacheClear() {
 
         final String aQuery = queryHeader +
-                "prefix f: <file:rust/toupper/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where { bind(wf:call(f:toUpper, \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
             aResult.stream().count();
         }
 
-        final String listCacheQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
+        final String listCacheQuery = queryHeader +
                 " select ?result where { unnest(wf:cacheClear() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(listCacheQuery).execute()) {
@@ -73,22 +71,21 @@ public class TestCache extends AbstractStardogTest {
 
     @Test
     public void testCacheLoadFromUrl() {
-        final String cacheClearQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
+        final String cacheClearQuery = queryHeader +
                 " select ?result where { unnest(wf:cacheClear() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(cacheClearQuery).execute()) {
             aResult.stream().count();
         }
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
-                "prefix f: <file:rust/string/toupper/target/wasm32-unknown-unknown/release/> " +
-                " select ?result where { bind(wf:cacheLoad(f:toUpper) AS ?result) }";
+        final String aQuery = queryHeader +
+                " select ?result where { bind(wf:cacheLoad(str(f:toUpper.wasm)) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
             aResult.stream().count();
         }
 
-        final String listCacheQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
+        final String listCacheQuery = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
                 " select ?result where { unnest(wf:cacheList() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(listCacheQuery).execute()) {
@@ -99,29 +96,28 @@ public class TestCache extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("file:src/main/rust/function_string/to_upper/target/wasm32-unknown-unknown/release/toUpper/1");
+            assertThat(aLiteral.label()).isEqualTo("file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper.wasm");
             assertThat(aResult).isExhausted();
         }
     }
 
     @Test
     public void testCacheLoadFromLiteral() {
-        final String cacheClearQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
+        final String cacheClearQuery = queryHeader +
                 " select ?result where { unnest(wf:cacheClear() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(cacheClearQuery).execute()) {
             aResult.stream().count();
         }
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
-                "prefix f: <file:rust/string/toupper/target/wasm32-unknown-unknown/release/> " +
-                " select ?result where { bind(wf:cacheLoad(str(f:toUpper)) AS ?result) }";
+        final String aQuery = queryHeader +
+                " select ?result where { bind(wf:cacheLoad(str(f:to_upper.wasm)) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
             aResult.stream().count();
         }
 
-        final String listCacheQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
+        final String listCacheQuery = queryHeader +
                 " select ?result where { unnest(wf:cacheList() AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(listCacheQuery).execute()) {
@@ -132,7 +128,7 @@ public class TestCache extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("file:rust/string/toupper/target/wasm32-unknown-unknown/release/toUpper/1");
+            assertThat(aLiteral.label()).isEqualTo("file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper.wasm");
             assertThat(aResult).isExhausted();
         }
     }

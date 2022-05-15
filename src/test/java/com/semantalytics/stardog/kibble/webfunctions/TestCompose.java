@@ -14,13 +14,28 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 public class TestCompose extends AbstractStardogTest {
 
     final String queryHeader = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
-            " prefix f: <file:src/main/rust/function/target/wasm32-unknown-unknown/release/> ";
+            " prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> ";
+
+    @Test
+    public void testCompositeOfFunctionAndPartial() {
+
+        final String aQuery = queryHeader +
+                " SELECT ?result WHERE { BIND(wf:call(wf:compose(str(f:echo1x1x1.wasm), wf:partial(str(f:concat.wasm), wf:var, \"dog\")), \"star\") AS ?result) }";
+
+        try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext().withFailMessage("Should have a result");
+            Optional<Literal> aPossibleLiteral = aResult.next().literal("result");
+            assertThat(aPossibleLiteral).isPresent();
+            assertThat(aPossibleLiteral.get().label()).isEqualTo("stardog");
+        }
+    }
 
     @Test
     public void wrongTypeForFirstArg() {
 
         final String aQuery = queryHeader +
-            " SELECT ?result WHERE { BIND(wf:call(1) AS ?result) }";
+            " SELECT ?result WHERE { BIND(wf:compose(1, \"stardog\") AS ?result) }";
 
         try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
             Assertions.assertThat(aResult.hasNext()).isTrue();
@@ -34,7 +49,7 @@ public class TestCompose extends AbstractStardogTest {
     public void tooFewArgs() {
 
         final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(wf:call() AS ?result) }";
+                " SELECT ?result WHERE { BIND(wf:compose(\"stardog\") AS ?result) }";
 
         try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
             Assertions.assertThat(aResult.hasNext()).isTrue();
@@ -45,25 +60,25 @@ public class TestCompose extends AbstractStardogTest {
     }
 
     @Test
-    public void compositionOfTwoBuiltins() {
+    public void compositionOfTwoBuiltinFunctions() {
 
         final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(wf:call(wf:compose(\"TOUPPER\", \"PI\")) AS ?result) }";
+                " SELECT ?result WHERE { BIND(wf:call(wf:compose(\"LCASE\", \"UCASE\"), \"stardog\") AS ?result) }";
 
         try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
             assertThat(aResult).hasNext().withFailMessage("Should have a result");
             Optional<Literal> aPossibleLiteral = aResult.next().literal("result");
             assertThat(aPossibleLiteral).isPresent();
-            assertThat(aPossibleLiteral.get().label()).isEqualTo("3.14...");
+            assertThat(aPossibleLiteral.get().label()).isEqualTo("stardog");
         }
     }
 
     @Test
-    public void testIriFunctionNoArgs() {
+    public void testCompositeOfTwoFunctions() {
 
         final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(wf:call(wf:compose(str(wf:echo1x1x1.wasm), str(wf:to_upper.wasm)), \"Hello world\") AS ?result) }";
+                " SELECT ?result WHERE { BIND(wf:call(wf:compose(str(f:echo1x1x1.wasm), str(f:to_upper.wasm)), \"Hello world\") AS ?result) }";
 
         try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -75,10 +90,10 @@ public class TestCompose extends AbstractStardogTest {
     }
 
     @Test
-    public void testIriFunction() {
+    public void testCompositeOfThreeFunctions() {
 
         final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(wf:call(string:upperCase, \"Hello world\" ) AS ?result) }";
+                " SELECT ?result WHERE { BIND(wf:call(wf:compose(str(f:echo1x1x1.wasm), str(f:to_upper.wasm)), \"Hello world\") AS ?result) }";
 
         try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -89,33 +104,5 @@ public class TestCompose extends AbstractStardogTest {
         }
     }
 
-    @Test
-    public void testStringFunction() {
 
-        final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(wf:call(str(fn:upperCase), \"Hello world\" ) AS ?result) }";
-
-        try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
-
-            assertThat(aResult).hasNext().withFailMessage("Should have a result");
-            Optional<Literal> aPossibleLiteral = aResult.next().literal("result");
-            assertThat(aPossibleLiteral).isPresent();
-            assertThat(aPossibleLiteral.get().label()).isEqualTo("HELLO WORLD");
-        }
-    }
-
-    @Test
-    public void testStringFunctionAsArg() {
-
-        final String aQuery = queryHeader +
-                " SELECT ?result WHERE { BIND(string:reverse(wf:call(string:upperCase, \"Hello world\" )) AS ?result) }";
-
-        try(final SelectQueryResult aResult = connection.select(aQuery).execute()) {
-
-            assertThat(aResult).hasNext().withFailMessage("Should have a result");
-            Optional<Literal> aPossibleLiteral = aResult.next().literal("result");
-            assertThat(aPossibleLiteral).isPresent();
-            assertThat(aPossibleLiteral.get().label()).isEqualTo("DLROW OLLEH");
-        }
-    }
 }

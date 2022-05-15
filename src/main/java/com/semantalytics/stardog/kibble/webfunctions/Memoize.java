@@ -1,20 +1,20 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
-import com.complexible.stardog.plan.filter.AbstractExpression;
-import com.complexible.stardog.plan.filter.Expression;
-import com.complexible.stardog.plan.filter.ExpressionVisitor;
-import com.complexible.stardog.plan.filter.ValueSolution;
+import com.complexible.stardog.plan.filter.*;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.FunctionRegistry;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
+import com.google.api.client.util.Lists;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.stardog.stark.IRI;
 import com.stardog.stark.Literal;
+import com.stardog.stark.Value;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertIntegerLiteral;
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertLiteral;
@@ -25,6 +25,15 @@ public final class Memoize extends AbstractExpression implements UserDefinedFunc
     private static final WebFunctionVocabulary names = WebFunctionVocabulary.memoize;
 
     private Cache<Integer, ValueOrError> cache;
+
+    public Memoize() {
+        super(new Expression[0]);
+    }
+
+    @Override
+    public void initialize() {
+        cache = null;
+    }
 
     private Memoize(final Memoize memoize) {
         super(memoize);
@@ -67,26 +76,18 @@ public final class Memoize extends AbstractExpression implements UserDefinedFunc
 
                 if(!secondArgValueOrError.isError()) {
 
-                    final String functionIri;
-
-                    if (assertLiteral(secondArgValueOrError.value())) {
-                        functionIri = ((Literal) secondArgValueOrError.value()).label();
-                    } else if (secondArgValueOrError.value() instanceof IRI) {
-                        functionIri = secondArgValueOrError.stringValue();
-                    } else {
-                        return ValueOrError.Error;
-                    }
+                    Value functionIri = secondArgValueOrError.value();
 
                     final List<Expression> functionArgs = getArgs().stream().skip(2).collect(toList());
 
-                    Optional<ValueOrError> cachedValueOrError = Optional.ofNullable(cache.getIfPresent(Objects.hash(functionIri, functionArgs, valueSolution)));
+                    Optional<ValueOrError> cachedValueOrError = Optional.ofNullable(cache.getIfPresent(Objects.hash(functionIri, functionArgs)));
 
                     if (cachedValueOrError.isPresent()) {
                         return cachedValueOrError.get();
                     } else {
                         try {
-                            final ValueOrError valueOrError = FunctionRegistry.Instance.get(functionIri, functionArgs, null).evaluate(valueSolution);
-                            cache.put(Objects.hash(functionIri, functionArgs, valueSolution), valueOrError);
+                            final ValueOrError valueOrError = FunctionRegistry.Instance.get(WebFunctionVocabulary.call.getImmutableName(), Stream.concat(Stream.of(Expressions.constant(functionIri)), functionArgs.stream()).collect(toList()), null).evaluate(valueSolution);
+                            cache.put(Objects.hash(functionIri, functionArgs), valueOrError);
                             return valueOrError;
                         } catch(UnsupportedOperationException e) {
                             return ValueOrError.Error;

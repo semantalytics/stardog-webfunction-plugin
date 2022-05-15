@@ -9,6 +9,7 @@ import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
 import com.google.common.collect.Lists;
 import com.stardog.stark.IRI;
 import com.stardog.stark.Literal;
+import com.stardog.stark.Value;
 
 import java.util.Arrays;
 import java.util.List;
@@ -20,6 +21,10 @@ import static java.util.stream.Collectors.toList;
 public final class Map extends AbstractExpression implements UserDefinedFunction {
 
     private static final WebFunctionVocabulary names = WebFunctionVocabulary.map;
+
+    public Map() {
+        super(new Expression[0]);
+    }
 
     private Map(final Map map) {
         super(map);
@@ -53,15 +58,7 @@ public final class Map extends AbstractExpression implements UserDefinedFunction
             if(firstArgValueOrError.isError()) {
                 return ValueOrError.Error;
             } else {
-                final String functionIri;
-
-                if (assertLiteral(firstArgValueOrError.value())) {
-                    functionIri = ((Literal) firstArgValueOrError.value()).label();
-                } else if (firstArgValueOrError.value() instanceof IRI) {
-                    functionIri = firstArgValueOrError.toString();
-                } else {
-                    return ValueOrError.Error;
-                }
+                final Value functionIri = firstArgValueOrError.value();
 
                 final ValueOrError secondArgValueOrError = getSecondArg().evaluate(valueSolution);
                 if(secondArgValueOrError.isError()) {
@@ -76,7 +73,9 @@ public final class Map extends AbstractExpression implements UserDefinedFunction
                         try {
                             List<ValueOrError> elementResults = Arrays.stream(elements.getValues())
                                     .mapToObj(dictionary::getValue)
-                                    .map(e -> FunctionRegistry.Instance.get(functionIri, Lists.newArrayList(Expressions.constant(e)), null)
+                                    .map(v -> FunctionRegistry
+                                            .Instance
+                                            .get(WebFunctionVocabulary.call.getImmutableName(), Lists.newArrayList(Expressions.constant(functionIri), Expressions.constant(v)), null)
                                             .evaluate(valueSolution))
                                     .collect(toList());
 

@@ -13,12 +13,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDoc extends AbstractStardogTest {
 
+    final String queryHeader = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
+            " prefix f: <file:src/main/rust/function/target/wasm32-unknown-unknown/release/> ";
+
     @Test
     public void testDoc() {
 
-        final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "snapshot") +
-                "prefix f: <file:rust/doc-test/target/wasm32-unknown-unknown/release/> " +
-                " select ?result where { bind(wf:doc(f:doc) AS ?result) }";
+        final String aQuery = queryHeader +
+                " SELECT ?result WHERE { BIND(wf:doc(f:doc) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 

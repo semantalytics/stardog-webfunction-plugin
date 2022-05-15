@@ -14,12 +14,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestInCallOutPropertyFunction extends AbstractStardogTest {
 
     @Test
-    public void testToUpperpfOutCallIn() {
+    public void testToUpperpf() {
 
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
                 "prefix f: <file:src/main/rust/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where {" +
-                "?result wf:OUT_call_IN (\"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper_pf.wasm\" \"stardog\")" +
+                "(\"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper_pf.wasm\" \"stardog\") wf:IN_call_OUT ?result" +
                 "}";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
@@ -65,7 +65,7 @@ public class TestInCallOutPropertyFunction extends AbstractStardogTest {
                 "prefix f: <file:src/main/rust/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where {" +
                 "BIND(\"stardog\" as ?str)" +
-                "?result wf:OUT_call_IN (\"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper_pf.wasm\" ?str) " +
+                "(\"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper_pf.wasm\" ?str) wf:IN_call_OUT ?result" +
                 "}";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
@@ -87,7 +87,7 @@ public class TestInCallOutPropertyFunction extends AbstractStardogTest {
         final String aQuery = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
                 "prefix f: <file:src/main/rust/target/wasm32-unknown-unknown/release/> " +
                 " select ?result where {" +
-                "?result wf:OUT_call_IN (\"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper_pf.wasm\" ?str)" +
+                "(\"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper_pf.wasm\" ?str) wf:IN_call_OUT ?result" +
                 " values ?str { \"what language do you think this is\" \"como estas\" \"bonjour\"}}";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {

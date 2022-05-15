@@ -1,5 +1,6 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
+import com.complexible.stardog.plan.eval.ExecutionException;
 import com.semantalytics.stardog.kibble.AbstractStardogTest;
 import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
@@ -41,6 +42,31 @@ public class TestServiceQuery extends AbstractStardogTest {
     }
 
     @Test
+    public void testServiceQueryWrapingBNode() {
+
+        final String aQuery = queryHeader +
+                " select ?result where { SERVICE wfs:service {" +
+                "    [ wf:call \"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper.wasm\"; " +
+                "      wf:args \"stardog\";" +
+                "      wf:result ?result " +
+                "    ]" +
+                "  }" +
+                "}";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
     public void testServiceQueryFunctionNameFromBind() {
 
         final String aQuery = queryHeader +
@@ -64,7 +90,7 @@ public class TestServiceQuery extends AbstractStardogTest {
         }
     }
 
-    @Test
+    @Test(expected = ExecutionException.class)
     public void missingCallPredicateShouldFail() {
 
         final String aQuery = queryHeader +
@@ -85,7 +111,7 @@ public class TestServiceQuery extends AbstractStardogTest {
         }
     }
 
-    @Test
+    @Test(expected = ExecutionException.class)
     public void missingResultsPredicateShouldFail() {
 
         final String aQuery = queryHeader +
@@ -94,19 +120,10 @@ public class TestServiceQuery extends AbstractStardogTest {
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
-            assertThat(aResult).hasNext();
-            Optional<Value> aPossibleValue = aResult.next().value("result");
-            assertThat(aPossibleValue).isPresent();
-            Value aValue = aPossibleValue.get();
-            assertThat(assertStringLiteral(aValue));
-            Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("STARDOG");
-
-            assertThat(aResult).isExhausted();
         }
     }
 
-    @Test
+    @Test(expected = ExecutionException.class)
     public void constantResultsShouldFail() {
 
         final String aQuery = queryHeader +
@@ -127,6 +144,29 @@ public class TestServiceQuery extends AbstractStardogTest {
         }
     }
 
+
+    @Test
+    public void testServiceTwoArgs() {
+
+        final String aQuery = queryHeader +
+                " select ?result where { SERVICE wfs:service {" +
+                "  [] wf:call \"file:src/test/rust/target/wasm32-unknown-unknown/release/concat.wasm\"; " +
+                "     wf:args (\"star\" \"dog\"); " +
+                "     wf:result ?result } }";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("stardog");
+
+            assertThat(aResult).isExhausted();
+        }
+    }
 
     @Test
     public void testServiceOneVarInput() {

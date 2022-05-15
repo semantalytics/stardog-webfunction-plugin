@@ -29,9 +29,7 @@ import java.net.InetSocketAddress;
     TestCompose.class,
     TestDoc.class,
     TestFilter.class,
-    TestGet.class,
     TestInCallOutPropertyFunction.class,
-    TestIpfs.class,
     TestIpfsGet.class,
     TestMap.class,
     TestMappingDictionaryAdd.class,
@@ -43,6 +41,7 @@ import java.net.InetSocketAddress;
     TestReduce.class,
     TestServiceQuery.class,
     TestToUpper.class,
+    TestWebFunctions.class,
 })
 
 public class WasmTestSuite extends TestCase {

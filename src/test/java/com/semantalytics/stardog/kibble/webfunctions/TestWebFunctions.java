@@ -12,16 +12,16 @@ import java.util.Optional;
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertStringLiteral;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestAggregate extends AbstractStardogTest {
+public class TestWebFunctions extends AbstractStardogTest {
 
     final String queryHeader = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
             " prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> ";
 
     @Test
-    public void testSum() {
+    public void testConst0x1x1() {
 
         final String aQuery = queryHeader +
-        " select (wf:agg(str(f:sum.wasm), ?a) AS ?result)  WHERE { VALUES ?a { 1 2 3 1}} ";
+        " select ?result WHERE { BIND(wf:call(str(f:const0x1x1.wasm)) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -31,16 +31,16 @@ public class TestAggregate extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(Literal.longValue(aLiteral)).isEqualTo(7);
+            assertThat(aLiteral.label()).isEqualTo("constant0");
             assertThat(aResult).isExhausted();
         }
     }
 
     @Test
-    public void testMultiplicity() {
+    public void testEcho1x1x1() {
 
         final String aQuery = queryHeader +
-                " select (wf:agg(str(f:sum.wasm), ?a) AS ?result)  WHERE { VALUES ?a { 1 1 1 1 2 3 4 } } ";
+                " select ?result WHERE { BIND(wf:call(str(f:echo1x1x1.wasm), \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -50,35 +50,27 @@ public class TestAggregate extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(Literal.longValue(aLiteral)).isEqualTo(13);
+            assertThat(aLiteral.label()).isEqualTo("stardog");
             assertThat(aResult).isExhausted();
         }
     }
 
     @Test
-    public void testSumWithGroupBy() {
+    public void testConcat() {
 
         final String aQuery = queryHeader +
-                " select ?group (wf:agg(str(f:sum.wasm), ?value) AS ?result)  WHERE { VALUES (?group ?value) { (1 2) (1 3) (2 4) (2 5) }} GROUP BY ?group ORDER BY ?group";
+                " select ?result WHERE { BIND(wf:call(str(f:concat.wasm), \"star\", \"dog\") AS ?result) }";
 
-        try (final SelectQueryResult selectQueryResult = connection.select(aQuery).execute()) {
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
-            assertThat(selectQueryResult).hasNext();
-            BindingSet aResult = selectQueryResult.next();
-            Value aValue = aResult.get("result");
-            Value groupValue = aResult.get("group");
-            assertThat(Literal.longValue((Literal)aValue)).isEqualTo(5);
-            assertThat(Literal.longValue((Literal) groupValue)).isEqualTo(1);
-
-            assertThat(selectQueryResult.hasNext()).isTrue();
-            aResult = selectQueryResult.next();
-
-            aValue = aResult.get("result");
-            groupValue = aResult.get("group");
-            assertThat(Literal.longValue((Literal)aValue)).isEqualTo(9);
-            assertThat(Literal.longValue((Literal)groupValue)).isEqualTo(2);
-
-            assertThat(selectQueryResult).isExhausted();
+            assertThat(aResult).hasNext();
+            final Optional<Value> aPossibleValue = aResult.next().value("result");
+            assertThat(aPossibleValue).isPresent();
+            final Value aValue = aPossibleValue.get();
+            assertThat(assertStringLiteral(aValue));
+            final Literal aLiteral = ((Literal)aValue);
+            assertThat(aLiteral.label()).isEqualTo("stardog");
+            assertThat(aResult).isExhausted();
         }
     }
 }

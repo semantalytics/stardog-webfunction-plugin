@@ -10,6 +10,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.collect.Lists;
 import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
+import com.stardog.stark.Values;
 import com.stardog.stark.query.Binding;
 import com.stardog.stark.query.BindingSet;
 import com.stardog.stark.query.BindingSets;
@@ -173,6 +174,44 @@ public class StardogWasm {
         try (final Func freeFunction = instanceRef.get().getFunc(store, WASM_FUNCTION_FREE).get();) {
             freeFunction.call(store, Val.fromI32(pointer.first), Val.fromI32(pointer.second));
         }
+    }
+
+    public static Pair<Integer, Integer> writeToWasmMemoryWithMultiplicity(AtomicReference<Instance> instanceRef, String name, Value[] values, long multiplicity) throws IOException {
+
+        final List<String> vars = Lists.newArrayListWithCapacity(values.length);
+        final BindingSets.Builder bindingSetsBuilder = BindingSets.builder();
+        IntStream.range(0, values.length).forEach(i -> {
+            vars.add(String.format("value_%d", i));
+            bindingSetsBuilder.add(String.format("value_%d", i), values[i]);
+        });
+        vars.add("multiplicity");
+        bindingSetsBuilder.add("multiplicity", Values.literal(multiplicity));
+        final List<BindingSet> bindings = Collections.singletonList(bindingSetsBuilder.build());
+
+        final SelectQueryResult queryResult = new SelectQueryResultImpl(vars, bindings);
+        final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+        QueryResultWriters.write(queryResult, byteArrayOutputStream, QueryResultFormats.JSON);
+
+        final Integer input_pointer;
+        try (final Func mallocFunction = instanceRef.get().getFunc(store, WASM_FUNCTION_MALLOC).get()) {
+            byteArrayOutputStream.write('\0');
+            mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
+            input_pointer = mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
+        }
+
+        try(final Memory memory = instanceRef.get().getMemory(store, name).get()) {
+            final ByteBuffer memoryBuffer = memory.buffer(store);
+            final byte[] input = byteArrayOutputStream.toByteArray();
+            final int pages = (int)(input.length / WASM_PAGE_SIZE + 1);
+            if (pages > memory.size(store)) {
+                memory.grow(store, pages - memory.size(store));
+            }
+
+            memoryBuffer.position(input_pointer);
+            memoryBuffer.put(input);
+        }
+        return Pair.create(input_pointer,byteArrayOutputStream.toByteArray().length);
     }
 
     public static Pair<Integer, Integer> writeToWasmMemory(AtomicReference<Instance> instanceRef, String name, Value[] values) throws IOException {

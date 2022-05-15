@@ -30,28 +30,8 @@ public class TestMappingDictionaryGet extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aLiteral.label()).isEqualTo("stardog");
             assertThat(aResult).isExhausted();
         }
     }
-
-    public void testDictionaryMapperGetConstant() {
-
-        final String aQuery = queryHeader +
-                "select (wf:call(str(f:mapping_dictionary_get), ?al) AS ?result) WHERE { bind(set(\"stardog\") as ?al) }";
-
-        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
-
-            assertThat(aResult).hasNext();
-            final Optional<Value> aPossibleValue = aResult.next().value("result");
-            assertThat(aPossibleValue).isPresent();
-            final Value aValue = aPossibleValue.get();
-            assertThat(assertStringLiteral(aValue));
-            final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("STARDOG");
-            assertThat(aResult).isExhausted();
-        }
-    }
-
-
 }

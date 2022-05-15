@@ -14,13 +14,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestToUpper extends AbstractStardogTest {
 
     final String queryHeader = WebFunctionVocabulary.sparqlPrefix("wf", "0.0.0") +
-            " prefix f: <file:src/main/rust/function/target/wasm32-unknown-unknown/release/> ";
+            " prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> ";
 
     @Test
     public void testToUpper() {
 
         final String aQuery = queryHeader +
-                " select ?result where { bind(wf:call(str(f:toupper.wasm), \"stardog\") AS ?result) }";
+                " select ?result where { bind(wf:call(str(f:to_upper.wasm), \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -36,10 +36,10 @@ public class TestToUpper extends AbstractStardogTest {
     }
 
     @Test
-    public void testToUpperWithCallX() {
+    public void testToUpperWithCall() {
 
         final String aQuery = queryHeader +
-                " select ?result where { bind(wf:callx(wf:compose(\"UCASE\", \"ENCODE_FOR_URI\"), \"star dog\") AS ?result) }";
+                " select ?result where { bind(wf:call(wf:compose(\"UCASE\", \"ENCODE_FOR_URI\"), \"star dog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -49,7 +49,7 @@ public class TestToUpper extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aLiteral.label()).isEqualTo("STAR%20DOG");
             assertThat(aResult).isExhausted();
         }
     }
@@ -58,7 +58,7 @@ public class TestToUpper extends AbstractStardogTest {
     public void testCallXWithCompositeOfBuiltinAndWasm() {
 
         final String aQuery = queryHeader +
-                " select ?result where { bind(wf:callx(wf:compose(str(f:toupper.wasm), \"ENCODE_FOR_URI\"), \"star dog\") AS ?result) }";
+                " select ?result where { bind(wf:call(wf:compose(str(f:to_upper.wasm), \"ENCODE_FOR_URI\"), \"star dog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
@@ -68,7 +68,7 @@ public class TestToUpper extends AbstractStardogTest {
             final Value aValue = aPossibleValue.get();
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aLiteral.label()).isEqualTo("STAR%20DOG");
             assertThat(aResult).isExhausted();
         }
     }
@@ -99,7 +99,7 @@ public class TestToUpper extends AbstractStardogTest {
 
         final String aQuery = queryHeader +
                 " select ?result where {" +
-                "?result wf:OUT_call_IN (\"file:src/test/rust/string/target/wasm32-unknown-unknown/release/to_upper_pf.wasm\" ?str)" +
+                "?result wf:OUT_call_IN (\"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper.wasm\" ?str)" +
                 " values ?str { \"what language do you think this is\" \"como estas\" \"bonjour\"}}";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
@@ -137,7 +137,7 @@ public class TestToUpper extends AbstractStardogTest {
     public void testLiteralUrl() {
 
         final String aQuery = queryHeader +
-                " select ?result where { bind(wf:call(\"file:rust/string/toupper/target/wasm32-unknown-unknown/release/to_upper.wasm\", \"stardog\") AS ?result) }";
+                " select ?result where { bind(wf:call(\"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper.wasm\", \"stardog\") AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
 
