@@ -12,6 +12,7 @@ members = [
     "function/echo1x2x1",
     "function/echo2x1x1",
     "function/echo2x2x1",
+    "function/empty",
     "function/is_numeric",
     "function/mapping_dictionary_add",
     "function/mapping_dictionary_get",

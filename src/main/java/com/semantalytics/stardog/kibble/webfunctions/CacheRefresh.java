@@ -26,12 +26,12 @@ public class CacheRefresh extends AbstractFunction implements UserDefinedFunctio
     @Override
     protected ValueOrError internalEvaluate(final Value... values) {
         if(values.length == 0) {
-            StardogWasm.loadingCache.asMap().keySet().stream().forEach(StardogWasm.loadingCache::refresh);
+            StardogWasmInstance.loadingCache.asMap().keySet().stream().forEach(StardogWasmInstance.loadingCache::refresh);
         } else {
             for (Value value : values) {
                 try {
-                    final URL wasmUrl = StardogWasm.getWasmUrl(value);
-                    StardogWasm.loadingCache.refresh(wasmUrl);
+                    final URL wasmUrl = StardogWasmInstance.getWasmUrl(value);
+                    StardogWasmInstance.loadingCache.refresh(wasmUrl);
                 } catch (MalformedURLException e) {
                     return ValueOrError.Error;
                 }

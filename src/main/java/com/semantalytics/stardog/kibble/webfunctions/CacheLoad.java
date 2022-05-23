@@ -28,8 +28,8 @@ public class CacheLoad extends AbstractFunction implements UserDefinedFunction {
     protected ValueOrError internalEvaluate(final Value... values) {
         for(Value value : values) {
             try {
-                final URL wasmUrl = StardogWasm.getWasmUrl(value);
-               StardogWasm.loadingCache.get(wasmUrl);
+                final URL wasmUrl = StardogWasmInstance.getWasmUrl(value);
+               StardogWasmInstance.loadingCache.get(wasmUrl);
             } catch (ExecutionException | MalformedURLException e) {
                 return ValueOrError.Error;
             }

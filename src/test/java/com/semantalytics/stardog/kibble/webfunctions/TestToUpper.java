@@ -74,66 +74,6 @@ public class TestToUpper extends AbstractStardogTest {
     }
 
     @Test
-    public void testToUpperPf() {
-
-        final String aQuery = queryHeader +
-                " select ?result where {" +
-                "?result wf:OUT_call_IN (\"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper_pf.wasm\" \"stardog\")" +
-                "}";
-
-        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
-
-            assertThat(aResult).hasNext();
-            final Optional<Value> aPossibleValue = aResult.next().value("result");
-            assertThat(aPossibleValue).isPresent();
-            final Value aValue = aPossibleValue.get();
-            assertThat(assertStringLiteral(aValue));
-            final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("STARDOG");
-            assertThat(aResult).isExhausted();
-        }
-    }
-
-    @Test
-    public void testToUpperPfMultiple() {
-
-        final String aQuery = queryHeader +
-                " select ?result where {" +
-                "?result wf:OUT_call_IN (\"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper.wasm\" ?str)" +
-                " values ?str { \"what language do you think this is\" \"como estas\" \"bonjour\"}}";
-
-        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
-
-            assertThat(aResult).hasNext();
-            Optional<Value> aPossibleValue = aResult.next().value("result");
-            assertThat(aPossibleValue).isPresent();
-            Value aValue = aPossibleValue.get();
-            assertThat(assertStringLiteral(aValue));
-            Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("WHAT LANGUAGE DO YOU THINK THIS IS");
-
-            assertThat(aResult).hasNext();
-            aPossibleValue = aResult.next().value("result");
-            assertThat(aPossibleValue).isPresent();
-            aValue = aPossibleValue.get();
-            assertThat(assertStringLiteral(aValue));
-            aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("COMO ESTAS");
-
-            assertThat(aResult).hasNext();
-            aPossibleValue = aResult.next().value("result");
-            assertThat(aPossibleValue).isPresent();
-            aValue = aPossibleValue.get();
-            assertThat(assertStringLiteral(aValue));
-            aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("BONJOUR");
-
-            assertThat(aResult).isExhausted();
-        }
-    }
-
-
-    @Test
     public void testLiteralUrl() {
 
         final String aQuery = queryHeader +

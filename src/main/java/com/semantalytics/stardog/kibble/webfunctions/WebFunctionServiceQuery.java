@@ -16,8 +16,12 @@ import com.google.common.collect.ImmutableSet;
 import com.stardog.stark.Value;
 import com.stardog.stark.query.io.QueryResultFormat;
 import com.stardog.stark.query.io.QueryResultFormats;
+
+import java.net.MalformedURLException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.function.UnaryOperator;
 
 import static com.stardog.stark.Values.iri;
@@ -30,6 +34,7 @@ public class WebFunctionServiceQuery extends PlanNodeBodyServiceQuery {
     private static final QueryResultFormat FORMAT = QueryResultFormats.JSON;
     private List<QueryTerm> args;
     private List<QueryTerm> results;
+    private StardogWasmInstance stardogWasmInstance;
 
     public Value getWasm() {
         return webFunctionIRI;
@@ -49,6 +54,11 @@ public class WebFunctionServiceQuery extends PlanNodeBodyServiceQuery {
         this.webFunctionIRI = webFunctionIRI;
         this.args = args;
         this.results = results;
+        try {
+            this.stardogWasmInstance = StardogWasmInstance.from(webFunctionIRI);
+        } catch (ExecutionException | MalformedURLException e) {
+            throw new PlanException(e);
+        }
     }
 
     @Override
@@ -56,17 +66,22 @@ public class WebFunctionServiceQuery extends PlanNodeBodyServiceQuery {
                                      final Operator theOperator,
                                      final PlanVarInfo theVarInfo) throws OperatorException {
 
-        return new WebFunctionServiceOperator(theContext, webFunctionIRI, args, results, theOperator);
+        return new WebFunctionServiceOperator(theContext, webFunctionIRI, args, results, theOperator, stardogWasmInstance);
     }
 
     @Override
     public Set<Integer> getRequiredUnboundOutputs() {
-        return results.stream().map(QueryTerm::getName).collect(toSet());
+        return results.stream().map(QueryTerm::getName).filter(i -> i != -1).collect(toSet());
+
     }
 
     @Override
     public Set<Integer> getRequiredInputBindings() {
-        return this.args.stream().filter(QueryTerm::isVariable).map(QueryTerm::getName).collect(toSet());
+        if(this.args.stream().anyMatch(QueryTerm::isVariable)) {
+            return this.args.stream().filter(QueryTerm::isVariable).map(QueryTerm::getName).collect(toSet());
+        } else {
+            return Collections.emptySet();
+        }
     }
 
     @Override
@@ -137,6 +152,7 @@ public class WebFunctionServiceQuery extends PlanNodeBodyServiceQuery {
 
     @Override
     public Cardinality estimateCardinality(ConnectableConnection theConn, Costs theCosts) {
-        return Cardinality.of(10000.0D, Accuracy.RANDOM);
+        Cardinality cardinality = stardogWasmInstance.getCardinality(thePlanNode.getCardinality());
+        return Cardinality.of(cardinality.value(), Accuracy.takeLessAccurate(cardinality.accuracy(), thePlanNode.getCardinality().accuracy()));
     }
 }

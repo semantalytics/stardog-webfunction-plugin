@@ -1,9 +1,5 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
-import com.complexible.stardog.db.ConnectableConnection;
-import com.complexible.stardog.index.statistics.Accuracy;
-import com.complexible.stardog.index.statistics.Cardinality;
-import com.complexible.stardog.plan.Costs;
 import com.complexible.stardog.plan.PlanNode;
 import com.complexible.stardog.plan.QueryTerm;
 import com.complexible.stardog.plan.eval.service.*;
@@ -14,12 +10,9 @@ import com.stardog.stark.IRI;
 import com.stardog.stark.Value;
 import com.stardog.stark.Values;
 
-import java.util.List;
+import java.util.*;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 
-import static com.stardog.stark.Values.iri;
 import static java.util.stream.Collectors.toList;
 
 final class WebFunctionService extends SingleQueryService {
@@ -41,7 +34,7 @@ final class WebFunctionService extends SingleQueryService {
         Preconditions.checkArgument(subjToParams.size() == 1, "Parameters must correspond to a single subject");
         ServiceParameters params = subjToParams.values().iterator().next();
         (new WebFunctionService.WebFunctionServiceParamValidator(params)).validate();
-        Value webFunctionValue = params.first(iri(WebFunctionVocabulary.call.getMutableName()))
+        Value webFunctionValue = WebFunctionVocabulary.call.getNames().stream().map(Values::iri).map(params::first).filter(Optional::isPresent).map(Optional::get).findFirst()
                 .filter(Expressions::isConstant)
                 .map((t) -> t.getValue().value())
                 .orElse(null);
@@ -50,8 +43,8 @@ final class WebFunctionService extends SingleQueryService {
     }
 
     private static PlanNodeBodyServiceQuery createServiceQuery(PlanNode body, Value webFunctionValue, ServiceParameters params) {
-        List<QueryTerm> args = params.get(iri(WebFunctionVocabulary.args.getMutableName()));
-        List<QueryTerm> results = params.get(iri(WebFunctionVocabulary.result.getMutableName()));
+        List<QueryTerm> args = WebFunctionVocabulary.args.getNames().stream().map(Values::iri).map(params::get).filter(l -> !l.isEmpty()).findFirst().orElse(Collections.emptyList());
+        List<QueryTerm> results = WebFunctionVocabulary.result.getNames().stream().map(Values::iri).map(params::get).filter(l -> !l.isEmpty()).findFirst().get();
         return new WebFunctionServiceQuery(body, webFunctionValue, args, results);
     }
 
@@ -66,7 +59,6 @@ final class WebFunctionService extends SingleQueryService {
 
         @Override
         public void validate() {
-            //TODO
             Preconditions.checkArgument(WebFunctionVocabulary.call.getNames().stream().map(Values::iri).filter(iri -> mParameters.contains(iri)).count() == 1);
             Preconditions.checkArgument(WebFunctionVocabulary.args.getNames().stream().map(Values::iri).filter(iri -> mParameters.contains(iri)).count() <= 1);
             Preconditions.checkArgument(WebFunctionVocabulary.result.getNames().stream().map(Values::iri).filter(iri -> mParameters.contains(iri)).count() == 1);
@@ -80,8 +72,6 @@ final class WebFunctionService extends SingleQueryService {
             Preconditions.checkArgument(mParameters.get(callParameter).size() == 1 && mParameters.get(callParameter).get(0).isConstant());
             Preconditions.checkArgument(mParameters.get(resultParameter).size() >= 1);
             mParameters.get(resultParameter).stream().forEach(QueryTerm::isVariable);
-
-            //optional args with anything
         }
     }
 }

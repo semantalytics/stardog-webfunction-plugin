@@ -10,8 +10,6 @@ public final class WebFunctionServiceModule extends AbstractStardogModule {
     @Override
     protected void configure() {
 
-        MetaProperties.register(WebFunctionOption.class);
-
         Multibinder.newSetBinder(binder(), Service.class)
                 .addBinding()
                 .to(WebFunctionService.class)

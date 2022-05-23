@@ -12,5 +12,5 @@ com.semantalytics.stardog.kibble.webfunctions.Map
 com.semantalytics.stardog.kibble.webfunctions.Memoize
 com.semantalytics.stardog.kibble.webfunctions.Partial
 com.semantalytics.stardog.kibble.webfunctions.PluginVersion
-com.semantalytics.stardog.kibble.webfunctions.PluginHash
+com.semantalytics.stardog.kibble.webfunctions.PluginVersions
 com.semantalytics.stardog.kibble.webfunctions.Reduce

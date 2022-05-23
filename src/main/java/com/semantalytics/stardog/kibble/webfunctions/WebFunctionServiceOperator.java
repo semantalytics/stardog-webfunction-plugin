@@ -1,6 +1,7 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.complexible.common.base.Pair;
+import com.complexible.common.rdf.model.ArrayLiteral;
 import com.complexible.stardog.StardogException;
 import com.complexible.stardog.plan.PlanNode;
 import com.complexible.stardog.plan.QueryTerm;
@@ -13,12 +14,14 @@ import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
+import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
 import com.stardog.stark.query.BindingSet;
 import com.stardog.stark.query.SelectQueryResult;
 import io.github.kawamuray.wasmtime.Func;
 import io.github.kawamuray.wasmtime.Instance;
 import io.github.kawamuray.wasmtime.Val;
+import org.apache.jena.rdfconnection.SparqlQueryConnection;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -28,6 +31,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static com.stardog.stark.Values.iri;
 
 /**
  * Executable operator for the repeat function
@@ -53,34 +58,26 @@ public final class WebFunctionServiceOperator extends AbstractOperator implement
      */
     private Iterator<Solution> mInputs = null;
 
-    private Instance instance;
-
     private SelectQueryResult selectQueryResult;
 
-    private List<QueryTerm> args;
-    private List<QueryTerm> results;
+    private final List<QueryTerm> args;
+    private final List<QueryTerm> results;
+    private final StardogWasmInstance stardogWasmInstance;
 
     public WebFunctionServiceOperator(final ExecutionContext theExecutionContext,
                                       final Value wasmIRI,
-                                      List<QueryTerm> args,
-                                      List<QueryTerm> results,
-                                      final Operator theOperator) {
+                                      final List<QueryTerm> args,
+                                      final List<QueryTerm> results,
+                                      final Operator theOperator,
+                                      final StardogWasmInstance stardogWasmInstance) {
         super(theExecutionContext, SortType.UNSORTED);
 
         mArg = Optional.ofNullable(theOperator);
         this.wasmIRI = wasmIRI;
         this.args = args;
         this.results = results;
-
-        try {
-            final URL wasmUrl = StardogWasm.getWasmUrl(wasmIRI);
-            if (instance != null) {
-                instance.close();
-            }
-            instance = StardogWasm.initWasm(wasmUrl, getMappings());
-        } catch (ExecutionException | MalformedURLException e) {
-            throw new StardogException(e);
-        }
+        this.stardogWasmInstance = stardogWasmInstance;
+        this.stardogWasmInstance.setMappingDictionary(theExecutionContext.getMappings());
     }
 
     @Override
@@ -106,7 +103,6 @@ public final class WebFunctionServiceOperator extends AbstractOperator implement
                     return aSoln;
                 });
             } else if (args.stream().allMatch(QueryTerm::isVariable)) {
-                // no arg or empty operator and the input is a variable, there's nothing to repeat
                 return endOfData();
             } else {
                 final Set<Integer> aVars = Sets.newHashSet();
@@ -120,13 +116,12 @@ public final class WebFunctionServiceOperator extends AbstractOperator implement
             }
         }
 
-        while (mInputs.hasNext()) {
-            if (solution == null) {
+        while (mInputs.hasNext() || solution != null) {
+            if (solution == null && mInputs.hasNext()) {
                 solution = mInputs.next();
             }
             if (selectQueryResult == null) {
                 try {
-                    final AtomicReference<Instance> instanceRef = new AtomicReference<>(instance);
                     ValueOrError[] valueOrErrors = args.stream().map(queryTerm -> {
                         if (queryTerm.isVariable()) {
                             return solution.getValue(queryTerm.getName(), getMappings());
@@ -136,44 +131,37 @@ public final class WebFunctionServiceOperator extends AbstractOperator implement
                     }).toArray(ValueOrError[]::new);
 
                     if (Arrays.stream(valueOrErrors).noneMatch(ValueOrError::isError)) {
-                        final Pair<Integer, Integer> input = StardogWasm.writeToWasmMemory(instanceRef, "memory", Arrays.stream(valueOrErrors).map(ValueOrError::value).toArray(Value[]::new));
-
-                        try (final Func evaluateFunction = instance.getFunc(StardogWasm.store, StardogWasm.WASM_FUNCTION_EVALUATE).get()) {
-                            final Integer output_pointer = evaluateFunction.call(StardogWasm.store, Val.fromI32(input.first))[0].i32();
-                            //TODO should get binding value_0 not just assume that its the first and only binding
-                            StardogWasm.free(instanceRef, input);
-                            selectQueryResult = StardogWasm.readFromWasmMemorySelectQueryResult(instanceRef, "memory", output_pointer);
-                        }
+                        selectQueryResult = stardogWasmInstance.evaluate(Arrays.stream(valueOrErrors).map(ValueOrError::value).toArray(Value[]::new));
                     } else {
-                        instance.close();
-                        instance = null;
+                        stardogWasmInstance.close();
                         return endOfData();
                     }
                 } catch (IOException e) {
-                    instance.close();
-                    instance = null;
+                    stardogWasmInstance.close();
                     return endOfData();
                 }
             }
             if(selectQueryResult.hasNext()) {
-                BindingSet bindingSet = selectQueryResult.next();
-                if (results.size() <= bindingSet.size()) {
-                    IntStream.range(0, results.size()).forEach(i ->
-                            solution.setValue(results.get(i).getName(), bindingSet.get(String.format("value_%d", i)), getMappings()));
-                } else {
-                    instance.close();
-                    instance = null;
-                    return endOfData();
-                }
+                final BindingSet bindingSet = selectQueryResult.next();
+
+                IntStream.range(0, results.size()).forEach(i -> {
+                    final Value value;
+                    if (bindingSet.get(String.format("value_%d", i)) instanceof Literal && ((Literal) bindingSet.get(String.format("value_%d", i))).datatypeIRI().equals(iri("tag:stardog:api:array"))) {
+                        value = ArrayLiteral.coerce((Literal) bindingSet.get(String.format("value_%d", i)));
+                    } else {
+                        value = bindingSet.get(String.format("value_%d", i));
+                    }
+                    solution.setValue(results.get(i).getName(), value, getMappings());
+                });
                 return solution;
             } else {
+                selectQueryResult.close();
                 selectQueryResult = null;
                 solution = null;
             }
         }
-        instance.close();
-        instance = null;
-        return endOfData();
+            stardogWasmInstance.close();
+            return endOfData();
     }
             /*
 
@@ -191,8 +179,7 @@ public final class WebFunctionServiceOperator extends AbstractOperator implement
     @Override
     protected void performReset() {
         mArg.ifPresent(Operator::reset);
-        instance.close();
-        instance = null;
+        stardogWasmInstance.close();
     }
 
     /**

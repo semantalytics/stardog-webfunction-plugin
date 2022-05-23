@@ -16,6 +16,7 @@ public enum WebFunctionVocabulary {
     cacheLoad(Template.urlTemplate),
     cacheRefresh(Template.urlTemplate),
     pluginVersion(Template.urlTemplate),
+    pluginVersions(Template.urlTemplate),
     pluginHash(Template.urlTemplate),
     agg(Template.urlTemplate),
     get(Template.urlTemplate),

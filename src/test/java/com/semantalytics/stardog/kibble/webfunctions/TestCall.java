@@ -3,6 +3,7 @@ package com.semantalytics.stardog.kibble.webfunctions;
 import com.semantalytics.stardog.kibble.AbstractStardogTest;
 import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
+import com.stardog.stark.query.BindingSet;
 import com.stardog.stark.query.SelectQueryResult;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.assertj.core.api.AssertionsForInterfaceTypes;
@@ -33,6 +34,21 @@ public class TestCall extends AbstractStardogTest {
             assertThat(assertStringLiteral(aValue));
             final Literal aLiteral = ((Literal)aValue);
             assertThat(aLiteral.label()).isEqualTo("STARDOG");
+            assertThat(aResult).isExhausted();
+        }
+    }
+
+    @Test
+    public void testEmptyResult() {
+
+        final String aQuery = queryHeader +
+                " SELECT ?result WHERE { BIND(wf:call(STR(f:empty.wasm)) AS ?result) }";
+
+        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
+
+            assertThat(aResult).hasNext();
+            BindingSet aBindingSet = aResult.next();
+            assertThat(aBindingSet).hasSize(0);
             assertThat(aResult).isExhausted();
         }
     }

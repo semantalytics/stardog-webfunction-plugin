@@ -26,12 +26,12 @@ public class CacheClear extends AbstractFunction implements UserDefinedFunction 
     @Override
     protected ValueOrError internalEvaluate(final Value... values) {
         if(values.length == 0) {
-            StardogWasm.loadingCache.invalidateAll();
+            StardogWasmInstance.loadingCache.invalidateAll();
         } else {
             for (Value value : values) {
                 try {
-                    final URL wasmUrl = StardogWasm.getWasmUrl(value);
-                    StardogWasm.loadingCache.invalidate(wasmUrl);
+                    final URL wasmUrl = StardogWasmInstance.getWasmUrl(value);
+                    StardogWasmInstance.loadingCache.invalidate(wasmUrl);
                 } catch (MalformedURLException e) {
                     return ValueOrError.Error;
                 }
