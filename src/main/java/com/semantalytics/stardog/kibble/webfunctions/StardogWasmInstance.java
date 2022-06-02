@@ -6,6 +6,7 @@ import com.complexible.stardog.index.dictionary.MappingDictionary;
 import com.complexible.stardog.index.statistics.Accuracy;
 import com.complexible.stardog.index.statistics.Cardinality;
 import com.complexible.stardog.plan.PlanException;
+import com.complexible.stardog.plan.QueryTerm;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -76,8 +77,9 @@ public class StardogWasmInstance implements Closeable {
     private static byte[] getWasm(final URL wasmUrl) throws IOException {
 
         final URLConnection conn = wasmUrl.openConnection();
-        conn.setConnectTimeout(5000);
-        conn.setReadTimeout(5000);
+        //TODO This should be configurable
+        conn.setConnectTimeout(240000);
+        conn.setReadTimeout(240000);
         conn.connect();
 
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -226,6 +228,45 @@ public class StardogWasmInstance implements Closeable {
         this.mappingDictionaryRef.set(mappingDictionary);
     }
 
+    private WasmMemoryRef writeToWasmMemoryWithCardinality(final String name, final Cardinality cardinality, final Value[] values) throws IOException {
+
+        final List<String> vars = Lists.newArrayListWithCapacity(values.length);
+        final BindingSets.Builder bindingSetsBuilder = BindingSets.builder();
+        IntStream.range(0, values.length).forEach(i -> {
+            vars.add(String.format("value_%d", i));
+            bindingSetsBuilder.add(String.format("value_%d", i), values[i]);
+        });
+        vars.add("cardinality");
+        bindingSetsBuilder.add("cardinality", Values.literal(cardinality.value()));
+        final List<BindingSet> bindings = Collections.singletonList(bindingSetsBuilder.build());
+
+        final SelectQueryResult queryResult = new SelectQueryResultImpl(vars, bindings);
+        final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+        QueryResultWriters.write(queryResult, byteArrayOutputStream, QueryResultFormats.JSON);
+
+        final Integer input_pointer;
+        try (final Func mallocFunction = instance.getFunc(store, WASM_FUNCTION_MALLOC).get()) {
+            byteArrayOutputStream.write('\0');
+            mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
+            input_pointer = mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
+        }
+
+        try (final Memory memory = instance.getMemory(store, name).get()) {
+            final ByteBuffer memoryBuffer = memory.buffer(store);
+            final byte[] input = byteArrayOutputStream.toByteArray();
+            final int pages = (int) (input.length / WASM_PAGE_SIZE + 1);
+            if (pages > memory.size(store)) {
+                memory.grow(store, pages - memory.size(store));
+            }
+
+            memoryBuffer.position(input_pointer);
+            memoryBuffer.put(input);
+        }
+        return WasmMemoryRef.from(input_pointer, byteArrayOutputStream.toByteArray().length);
+    }
+
+
     private WasmMemoryRef writeToWasmMemoryWithMultiplicity(final String name, final Value[] values, final long multiplicity) throws IOException {
 
         final List<String> vars = Lists.newArrayListWithCapacity(values.length);
@@ -290,9 +331,9 @@ public class StardogWasmInstance implements Closeable {
         closed = true;
     }
 
-    public Cardinality getCardinality(final Cardinality inputCardinality) {
+    public Cardinality getCardinality(final Cardinality inputCardinality, List<Value> args) {
         try {
-            final WasmMemoryRef input = this.writeToWasmMemory("memory", new Value[]{Values.literal(inputCardinality.value())});
+            final WasmMemoryRef input = this.writeToWasmMemoryWithCardinality("memory", inputCardinality, args.toArray(new Value[0]));
 
             try (final Func evaluateFunction = instance.getFunc(store, WASM_FUNCTION_CARDINALITY_ESTIMATE).get()) {
                 final Integer output_pointer = evaluateFunction.call(store, Val.fromI32(input.addr))[0].i32();
@@ -300,7 +341,7 @@ public class StardogWasmInstance implements Closeable {
                 try (final SelectQueryResult selectQueryResult = readFromWasmMemorySelectQueryResult("memory", output_pointer)) {
                     if (selectQueryResult.hasNext()) {
                         final BindingSet bs = selectQueryResult.next();
-                        return Cardinality.of(Literal.longValue((Literal) bs.get("value_0")), Accuracy.valueOf(((Literal) bs.get("value_1")).label()));
+                        return Cardinality.of(Literal.longValue((Literal) bs.get("cardinality")), Accuracy.valueOf(((Literal) bs.get("accuracy")).label()));
                     } else {
                         throw new PlanException("Unable to retrieve cardinality estimate");
                     }

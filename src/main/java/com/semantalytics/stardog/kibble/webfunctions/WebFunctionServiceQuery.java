@@ -10,10 +10,13 @@ import com.complexible.stardog.plan.eval.operator.*;
 import com.complexible.stardog.plan.eval.service.PlanNodeBodyServiceQuery;
 import com.complexible.stardog.plan.eval.service.ServiceQuery;
 import com.complexible.stardog.plan.filter.expr.Constant;
+import com.complexible.stardog.plan.filter.expr.ValueOrError;
+import com.google.api.client.util.Lists;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.stardog.stark.Value;
+import com.stardog.stark.Values;
 import com.stardog.stark.query.io.QueryResultFormat;
 import com.stardog.stark.query.io.QueryResultFormats;
 
@@ -23,6 +26,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.function.UnaryOperator;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static com.stardog.stark.Values.iri;
 import static java.util.stream.Collectors.*;
@@ -77,16 +82,12 @@ public class WebFunctionServiceQuery extends PlanNodeBodyServiceQuery {
 
     @Override
     public Set<Integer> getRequiredInputBindings() {
-        if(this.args.stream().anyMatch(QueryTerm::isVariable)) {
-            return this.args.stream().filter(QueryTerm::isVariable).map(QueryTerm::getName).collect(toSet());
-        } else {
-            return Collections.emptySet();
-        }
+        return this.args.stream().filter(QueryTerm::isVariable).map(QueryTerm::getName).collect(toSet());
     }
 
     @Override
     public ImmutableSet<Integer> getAssuredVars() {
-        return thePlanNode.getAssuredVars();
+        return thePlanNode.getAllVars();
     }
 
     @Override
@@ -152,7 +153,18 @@ public class WebFunctionServiceQuery extends PlanNodeBodyServiceQuery {
 
     @Override
     public Cardinality estimateCardinality(ConnectableConnection theConn, Costs theCosts) {
-        Cardinality cardinality = stardogWasmInstance.getCardinality(thePlanNode.getCardinality());
+        List<ValueOrError> argsValueOrError = args.stream().map(queryTerm -> {
+            if(queryTerm.isVariable()) {
+                return ValueOrError.General.of(Values.iri(WebFunctionVocabulary.var.getImmutableName()));
+            } else {
+                return queryTerm.getValue();
+            }
+        }).collect(toList());
+        if(argsValueOrError.stream().anyMatch(ValueOrError::isError)) {
+            throw new PlanException("Unable to generate cardinalty estimates");
+        }
+
+        Cardinality cardinality = stardogWasmInstance.getCardinality(thePlanNode.getCardinality(), argsValueOrError.stream().map(ValueOrError::value).collect(toList()));
         return Cardinality.of(cardinality.value(), Accuracy.takeLessAccurate(cardinality.accuracy(), thePlanNode.getCardinality().accuracy()));
     }
 }

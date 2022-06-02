@@ -4,7 +4,6 @@ import com.complexible.stardog.plan.eval.ExecutionException;
 import com.semantalytics.stardog.kibble.AbstractStardogTest;
 import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
-import com.stardog.stark.query.BindingSet;
 import com.stardog.stark.query.SelectQueryResult;
 import org.junit.Test;
 
@@ -23,18 +22,16 @@ public class TestServiceQuery extends AbstractStardogTest {
     public void testTemp() {
 
         final String aQuery =
-"                prefix lang: <http://wf.semantalytics.com/ipns/k51qzi5uqu5dlx0ttqevj64d3twk31y7hsgnofkqkjaiv11k98lj2rx60kjgv5/stardog/function/string/lang/> " +
-"                prefix array: <http://wf.semantalytics.com/ipns/k51qzi5uqu5dlx0ttqevj64d3twk31y7hsgnofkqkjaiv11k98lj2rx60kjgv5/stardog/function/array/> " +
 "                prefix wf: <http://semantalytics.com/2021/03/ns/stardog/webfunction/0.0.0/> " +
-"                prefix wfs: <tag:semantalytics:stardog:webfunction:0.0.0:> " +
-                "select ?instring ?name ?iso ?conf where {" +
-"            bind(wf:call(array:of, \"en\", \"es\", \"fr\") as ?langs) " +
-"            service <tag:semantalytics:stardog:webfunction:0.0.0:service> { " +
+        " prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> " +
+        "                prefix wfs: <tag:semantalytics:stardog:webfunction:0.0.0:> " +
+                "select ?str ?lang ?iso_639_1 ?iso_639_3 ?confidence where {" +
+       "{ select ?langs ?str WHERE { bind(wf:call(str(f:array_of.wasm), \"en\", \"es\", \"fr\") as ?langs) { VALUES ?str { \"hello world\" \"buenos dias\" \"bonjour\"} } } } " +
+"            service wfs:service { " +
 "                    [] wf:call \"http://wf.semantalytics.com/ipns/k51qzi5uqu5dlx0ttqevj64d3twk31y7hsgnofkqkjaiv11k98lj2rx60kjgv5/stardog/function/string/lang/detectConfidence/1.0.3-SNAPSHOT\"; " +
 "            wf:args (?str ?langs); " +
-"            wf:result (?instring ?name ?iso ?conf) . " +
+"            wf:result (?lang ?iso_639_1 ?iso_639_3 ?confidence) . " +
 "        } " +
-"            values ?str { \"hello world\" } " +
 "        } ";
 
 
