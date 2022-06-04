@@ -10,7 +10,6 @@ import com.stardog.stark.Value;
 import com.stardog.stark.impl.IntegerLiteral;
 import com.stardog.stark.impl.StringLiteral;
 import org.apache.commons.io.IOUtils;
-import org.apache.james.mime4j.util.MimeUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

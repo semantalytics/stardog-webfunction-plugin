@@ -12,15 +12,20 @@ import com.complexible.stardog.api.admin.AdminConnection;
 import com.complexible.stardog.api.admin.AdminConnectionConfiguration;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
+import io.undertow.server.handlers.cache.CachedHttpRequest;
+import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 
 
 public abstract class AbstractStardogTest {
@@ -34,16 +39,19 @@ public abstract class AbstractStardogTest {
 
     @BeforeClass
     public static void beforeClass() throws IOException, ServerException {
+
        AdminConnection adminConnection;
        try{
            adminConnection = AdminConnectionConfiguration.toEmbeddedServer()
                 .credentials("admin", "admin")
                 .connect();
-           adminConnection.setProperty("ipfs.gateway", "http://did.this.get.set");
        } catch(StardogException e) {
 
+           Process process = new ProcessBuilder("cargo", "make", "build").directory(new File("./src/test/rust")).start();
+           System.out.println(IOUtils.toString(process.getErrorStream(), Charset.defaultCharset()));
+           System.out.println(IOUtils.toString(process.getErrorStream(), Charset.defaultCharset()));
 
-        final File TEST_HOME = Files.createTempDir();
+           final File TEST_HOME = Files.createTempDir();
         TEST_HOME.deleteOnExit();
 
         try {

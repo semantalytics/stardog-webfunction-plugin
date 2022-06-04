@@ -7,15 +7,12 @@ import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.FunctionRegistry;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
 import com.google.common.collect.Lists;
-import com.stardog.stark.IRI;
-import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertArrayLiteral;
-import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertLiteral;
 import static java.util.stream.Collectors.toList;
 
 public final class Map extends AbstractExpression implements UserDefinedFunction {

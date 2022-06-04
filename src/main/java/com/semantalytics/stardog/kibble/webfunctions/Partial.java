@@ -6,7 +6,6 @@ import com.complexible.stardog.plan.filter.ExpressionVisitor;
 import com.complexible.stardog.plan.filter.ValueSolution;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
-import com.google.common.collect.Lists;
 import com.stardog.stark.BNode;
 import com.stardog.stark.Value;
 import com.stardog.stark.Values;

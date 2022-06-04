@@ -1,6 +1,6 @@
-package com.semantalytics.stardog.kibble.webfunctions;
+package com.semantalytics.stardog.kibble.webfunctions.propertyfunction.incallout;
 
-import com.complexible.common.rdf.model.ArrayLiteral;
+import com.complexible.stardog.StardogException;
 import com.complexible.stardog.plan.QueryTerm;
 import com.complexible.stardog.plan.SortType;
 import com.complexible.stardog.plan.eval.ExecutionContext;
@@ -8,28 +8,32 @@ import com.complexible.stardog.plan.eval.operator.*;
 import com.complexible.stardog.plan.eval.operator.impl.AbstractOperator;
 import com.complexible.stardog.plan.eval.operator.impl.Solutions;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
-import com.stardog.stark.Literal;
+import com.semantalytics.stardog.kibble.webfunctions.StardogWasmInstance;
 import com.stardog.stark.Value;
 import com.stardog.stark.query.BindingSet;
 import com.stardog.stark.query.SelectQueryResult;
 
 import java.io.IOException;
-import java.util.*;
+import java.net.MalformedURLException;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
-import static com.stardog.stark.Values.iri;
 
 /**
  * Executable operator for the repeat function
  *
  * @author Michael Grove
  */
-public final class WebFunctionServiceOperator extends AbstractOperator implements PropertyFunctionOperator {
+public final class WebFunctionInCallOutPropertyFunctionOperator extends AbstractOperator implements PropertyFunctionOperator {
 
-    private Value wasmIRI ;
+    private ValueOrError wasmIRI ;
 
     /**
      * The current solution
@@ -42,30 +46,34 @@ public final class WebFunctionServiceOperator extends AbstractOperator implement
     private final Optional<Operator> mArg;
 
     /**
+     * The original node
+     */
+    private final WebFunctionInCallOutPropertyFunctionPlanNode mNode;
+
+    /**
      * An iterator over the child solutions of this operator
      */
     private Iterator<Solution> mInputs = null;
 
+    private StardogWasmInstance instance;
+
     private SelectQueryResult selectQueryResult;
 
-    private final List<QueryTerm> args;
-    private final List<QueryTerm> results;
-    private final StardogWasmInstance stardogWasmInstance;
-
-    public WebFunctionServiceOperator(final ExecutionContext theExecutionContext,
-                                      final Value wasmIRI,
-                                      final List<QueryTerm> args,
-                                      final List<QueryTerm> results,
-                                      final Operator theOperator,
-                                      final StardogWasmInstance stardogWasmInstance) {
+    public WebFunctionInCallOutPropertyFunctionOperator(final ExecutionContext theExecutionContext,
+                                                        final WebFunctionInCallOutPropertyFunctionPlanNode theNode,
+                                                        final Operator theOperator) {
         super(theExecutionContext, SortType.UNSORTED);
 
-        mArg = Optional.ofNullable(theOperator);
-        this.wasmIRI = wasmIRI;
-        this.args = args;
-        this.results = results;
-        this.stardogWasmInstance = stardogWasmInstance;
-        this.stardogWasmInstance.setMappingDictionary(theExecutionContext.getMappings());
+        mNode = Preconditions.checkNotNull(theNode);
+        mArg = Optional.of(theOperator);
+        wasmIRI = theNode.getWasm();
+
+        try {
+            //TODO should check if it's an error before assumign it's a value
+            instance = StardogWasmInstance.from(wasmIRI.value(), getMappings());
+        } catch (ExecutionException | MalformedURLException e) {
+            throw new StardogException(e);
+        }
     }
 
     @Override
@@ -78,7 +86,7 @@ public final class WebFunctionServiceOperator extends AbstractOperator implement
                 Set<Integer> aVars = Sets.newHashSet(mArg.get().getVars());
 
                 // and these are the ones that the pf will bind
-                aVars.addAll(results.stream().map(QueryTerm::getName).collect(Collectors.toList()));
+                aVars.addAll(mNode.getResultVars().stream().map(QueryTerm::getName).collect(Collectors.toList()));
 
                 // now we create a solution that contains room for bindings for these variables
                 final Solution aSoln = mExecutionContext.getSolutionFactory()
@@ -90,12 +98,13 @@ public final class WebFunctionServiceOperator extends AbstractOperator implement
                     Solutions.copy(aSoln, theSoln);
                     return aSoln;
                 });
-            } else if (args.stream().allMatch(QueryTerm::isVariable)) {
+            } else if (mNode.getInput().stream().allMatch(QueryTerm::isVariable)) {
+                // no arg or empty operator and the input is a variable, there's nothing to repeat
                 return endOfData();
             } else {
                 final Set<Integer> aVars = Sets.newHashSet();
 
-                aVars.addAll(results.stream().filter(QueryTerm::isVariable).map(QueryTerm::getName).collect(Collectors.toList()));
+                aVars.addAll(mNode.getResultVars().stream().map(QueryTerm::getName).collect(Collectors.toList()));
 
                 // we only want to create solutions with the minimum number of variables
                 mInputs = Iterators.singletonIterator(mExecutionContext.getSolutionFactory()
@@ -104,13 +113,13 @@ public final class WebFunctionServiceOperator extends AbstractOperator implement
             }
         }
 
-        while (mInputs.hasNext() || solution != null) {
-            if (solution == null && mInputs.hasNext()) {
+        while (mInputs.hasNext()) {
+            if (solution == null) {
                 solution = mInputs.next();
             }
             if (selectQueryResult == null) {
                 try {
-                    ValueOrError[] valueOrErrors = args.stream().map(queryTerm -> {
+                    ValueOrError[] valueOrErrors = mNode.getSubjects().stream().map(queryTerm -> {
                         if (queryTerm.isVariable()) {
                             return solution.getValue(queryTerm.getName(), getMappings());
                         } else {
@@ -119,37 +128,37 @@ public final class WebFunctionServiceOperator extends AbstractOperator implement
                     }).toArray(ValueOrError[]::new);
 
                     if (Arrays.stream(valueOrErrors).noneMatch(ValueOrError::isError)) {
-                        selectQueryResult = stardogWasmInstance.evaluate(Arrays.stream(valueOrErrors).map(ValueOrError::value).toArray(Value[]::new));
+                            selectQueryResult = instance.evaluate(Arrays.stream(valueOrErrors).skip(1).map(ValueOrError::value).toArray(Value[]::new));
                     } else {
-                        stardogWasmInstance.close();
+                        instance.close();
+                        instance = null;
                         return endOfData();
                     }
                 } catch (IOException e) {
-                    stardogWasmInstance.close();
+                    instance.close();
+                    instance = null;
                     return endOfData();
                 }
             }
             if(selectQueryResult.hasNext()) {
-                final BindingSet bindingSet = selectQueryResult.next();
-
-                IntStream.range(0, results.size()).forEach(i -> {
-                    final Value value;
-                    if (bindingSet.get(String.format("value_%d", i)) instanceof Literal && ((Literal) bindingSet.get(String.format("value_%d", i))).datatypeIRI().equals(iri("tag:stardog:api:array"))) {
-                        value = ArrayLiteral.coerce((Literal) bindingSet.get(String.format("value_%d", i)));
-                    } else {
-                        value = bindingSet.get(String.format("value_%d", i));
-                    }
-                    solution.setValue(results.get(i).getName(), value, getMappings());
-                });
+                BindingSet bindingSet = selectQueryResult.next();
+                if (mNode.getResultVars().size() <= bindingSet.size()) {
+                    IntStream.range(0, mNode.getResultVars().size()).forEach(i ->
+                            solution.setValue(mNode.getResultVars().get(i).getName(), bindingSet.get(String.format("value_%d", i)), getMappings()));
+                } else {
+                    instance.close();
+                    instance = null;
+                    return endOfData();
+                }
                 return solution;
             } else {
-                selectQueryResult.close();
                 selectQueryResult = null;
                 solution = null;
             }
         }
-            stardogWasmInstance.close();
-            return endOfData();
+        instance.close();
+        instance = null;
+        return endOfData();
     }
             /*
 
@@ -167,7 +176,8 @@ public final class WebFunctionServiceOperator extends AbstractOperator implement
     @Override
     protected void performReset() {
         mArg.ifPresent(Operator::reset);
-        stardogWasmInstance.close();
+        instance.close();
+        instance = null;
     }
 
     /**
@@ -175,7 +185,7 @@ public final class WebFunctionServiceOperator extends AbstractOperator implement
      */
     @Override
     public Set<Integer> getVars() {
-        return results.stream()
+        return mNode.getSubjects().stream()
                 .filter(QueryTerm::isVariable)
                 .map(QueryTerm::getName)
                 .collect(Collectors.toSet());

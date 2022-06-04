@@ -4,10 +4,8 @@ import com.complexible.stardog.plan.filter.*;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.FunctionRegistry;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
-import com.google.api.client.util.Lists;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.stardog.stark.IRI;
 import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
 
@@ -17,7 +15,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertIntegerLiteral;
-import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertLiteral;
 import static java.util.stream.Collectors.toList;
 
 public final class Memoize extends AbstractExpression implements UserDefinedFunction {

@@ -1,15 +1,17 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
-import com.complexible.stardog.plan.filter.*;
+import com.complexible.stardog.plan.filter.AbstractExpression;
+import com.complexible.stardog.plan.filter.EvalUtil;
+import com.complexible.stardog.plan.filter.Expression;
+import com.complexible.stardog.plan.filter.ExpressionVisitor;
+import com.complexible.stardog.plan.filter.ValueSolution;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
-import com.complexible.stardog.plan.filter.functions.FunctionRegistry;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
 import com.stardog.stark.*;
-import org.apache.commons.math3.analysis.function.Exp;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.*;
 

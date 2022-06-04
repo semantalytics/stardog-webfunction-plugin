@@ -11,29 +11,36 @@ import com.complexible.stardog.api.admin.AdminConnectionConfiguration;
 import com.google.common.io.Files;
 import com.semantalytics.stardog.kibble.webfunctions.*;
 import junit.framework.TestCase;
+import org.apache.commons.io.IOUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 
 @RunWith(Suite.class)
 @SuiteClasses({
     TestAggregate.class,
+    TestArrayOf.class,
     TestCache.class,
     TestCall.class,
     TestCompose.class,
     TestDoc.class,
     TestFilter.class,
+    TestInCallOutPropertyFunction.class,
     TestIpfsGet.class,
     TestMap.class,
-    TestMappingDictionaryAdd.class,
     TestMappingDictionaryGet.class,
+    TestMappingDictionaryAdd.class,
     TestMemoize.class,
+    TestOutCallInPropertyFunction.class,
     TestPartial.class,
     TestPluginVersion.class,
     TestReduce.class,
@@ -53,6 +60,10 @@ public class WasmTestSuite extends TestCase {
 
     @BeforeClass
     public static void beforeClass() throws IOException, ServerException {
+
+        Process process = new ProcessBuilder("cargo", "make", "build").directory(new File("./src/test/rust")).start();
+        System.out.println(IOUtils.toString(process.getErrorStream(), Charset.defaultCharset()));
+        System.out.println(IOUtils.toString(process.getErrorStream(), Charset.defaultCharset()));
 
         try{
             AdminConnectionConfiguration.toEmbeddedServer()

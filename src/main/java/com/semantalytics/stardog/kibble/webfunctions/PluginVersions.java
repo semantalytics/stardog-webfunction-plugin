@@ -12,9 +12,7 @@ import com.stardog.stark.Values;
 import com.vdurmont.semver4j.Semver;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.ServiceLoader;
-import java.util.stream.Collectors;
 
 public class PluginVersions extends AbstractExpression implements UserDefinedFunction {
 

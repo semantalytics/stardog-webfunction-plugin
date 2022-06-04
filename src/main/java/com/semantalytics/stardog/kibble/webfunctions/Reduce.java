@@ -12,7 +12,6 @@ import com.stardog.stark.Literal;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Stream;
 
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertArrayLiteral;
 import static com.complexible.stardog.plan.filter.functions.AbstractFunction.assertLiteral;

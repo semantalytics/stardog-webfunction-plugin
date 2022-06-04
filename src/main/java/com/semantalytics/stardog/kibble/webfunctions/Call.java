@@ -1,10 +1,17 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
-import com.complexible.stardog.plan.filter.*;
+import com.complexible.stardog.plan.filter.AbstractExpression;
+import com.complexible.stardog.plan.filter.Expression;
+import com.complexible.stardog.plan.filter.ExpressionVisitor;
+import com.complexible.stardog.plan.filter.Expressions;
+import com.complexible.stardog.plan.filter.ValueSolution;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
 import com.complexible.stardog.plan.filter.functions.FunctionRegistry;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
-import com.stardog.stark.*;
+import com.stardog.stark.BNode;
+import com.stardog.stark.IRI;
+import com.stardog.stark.Literal;
+import com.stardog.stark.Value;
 import com.stardog.stark.query.SelectQueryResult;
 
 import java.io.IOException;

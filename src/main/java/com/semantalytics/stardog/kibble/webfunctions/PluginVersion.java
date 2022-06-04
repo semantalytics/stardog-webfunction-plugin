@@ -6,13 +6,6 @@ import com.complexible.stardog.plan.filter.functions.AbstractFunction;
 import com.complexible.stardog.plan.filter.functions.UserDefinedFunction;
 import com.stardog.stark.Value;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.CodeSource;
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
-
 import static com.stardog.stark.Values.*;
 
 public class PluginVersion extends AbstractFunction implements UserDefinedFunction {

@@ -11,7 +11,6 @@ import com.complexible.stardog.plan.eval.service.PlanNodeBodyServiceQuery;
 import com.complexible.stardog.plan.eval.service.ServiceQuery;
 import com.complexible.stardog.plan.filter.expr.Constant;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
-import com.google.api.client.util.Lists;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
@@ -21,13 +20,10 @@ import com.stardog.stark.query.io.QueryResultFormat;
 import com.stardog.stark.query.io.QueryResultFormats;
 
 import java.net.MalformedURLException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.function.UnaryOperator;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static com.stardog.stark.Values.iri;
 import static java.util.stream.Collectors.*;

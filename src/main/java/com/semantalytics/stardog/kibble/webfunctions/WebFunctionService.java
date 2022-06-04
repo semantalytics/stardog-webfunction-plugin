@@ -10,8 +10,12 @@ import com.stardog.stark.IRI;
 import com.stardog.stark.Value;
 import com.stardog.stark.Values;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import static java.util.stream.Collectors.toList;
 
