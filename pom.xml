@@ -6,7 +6,7 @@
 
     <groupId>com.semantalytics.stardog</groupId>
     <artifactId>webfunction</artifactId>
-    <version>1.0.3-SNAPSHOT</version>
+    <version>1.0.3</version>
 
     <developers>
         <developer>
@@ -121,7 +121,7 @@
     </repositories>
 
     <build>
-        <finalName>semantalytics-stardog-${project.artifactId}-${project.version}-sd${stardog.version}</finalName>
+        <finalName>semantalytics-stardog-${project.artifactId}-${project.version}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
