@@ -40,9 +40,10 @@ public abstract class AbstractStardogTest {
     @BeforeClass
     public static void beforeClass() throws IOException, ServerException {
 
+       final String serverUrl = "http://localhost:" + TEST_PORT;
        AdminConnection adminConnection;
        try{
-           adminConnection = AdminConnectionConfiguration.toEmbeddedServer()
+           adminConnection = AdminConnectionConfiguration.toServer(serverUrl)
                 .credentials("admin", "admin")
                 .connect();
        } catch(StardogException e) {
@@ -67,7 +68,7 @@ public abstract class AbstractStardogTest {
         SERVER = STARDOG.newServer()
                 .bind(new InetSocketAddress("localhost", TEST_PORT)).start();
 
-        adminConnection = AdminConnectionConfiguration.toEmbeddedServer()
+        adminConnection = AdminConnectionConfiguration.toServer(serverUrl)
                 .credentials("admin", "admin")
                 .connect();
 
@@ -90,6 +91,7 @@ public abstract class AbstractStardogTest {
     @Before
     public void setUp() {
         connection = ConnectionConfiguration.to(DB)
+                .server("http://localhost:" + TEST_PORT)
                 .credentials("admin", "admin")
                 .connect();
     }

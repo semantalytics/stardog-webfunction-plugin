@@ -2,6 +2,7 @@ package com.semantalytics.stardog.kibble.webfunctions;
 
 import com.complexible.stardog.plan.PlanNode;
 import com.complexible.stardog.plan.QueryTerm;
+import com.complexible.stardog.plan.eval.ExecutionContext;
 import com.complexible.stardog.plan.eval.service.*;
 import com.complexible.stardog.plan.filter.Expressions;
 import com.google.common.base.Preconditions;
@@ -13,13 +14,12 @@ import com.stardog.stark.Values;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import static java.util.stream.Collectors.toList;
 
-final class WebFunctionService extends SingleQueryService {
+final class WebFunctionService extends SingleQueryService<WebFunctionServiceQuery> {
 
     //TODO move to WebFunctionVocabulary
 
@@ -29,11 +29,11 @@ final class WebFunctionService extends SingleQueryService {
     }
 
     @Override
-    public ServiceQuery createQuery(final IRI theIRI, final PlanNode body) {
+    public WebFunctionServiceQuery createQuery(final IRI theIRI, final PlanNode body, final ExecutionContext theContext) {
         return createWebFunctionQuery(body);
     }
 
-    public static PlanNodeBodyServiceQuery createWebFunctionQuery(final PlanNode theBody) {
+    public static WebFunctionServiceQuery createWebFunctionQuery(final PlanNode theBody) {
         Map<QueryTerm, ServiceParameters> subjToParams = ServiceParameterUtils.build(theBody);
         Preconditions.checkArgument(subjToParams.size() == 1, "Parameters must correspond to a single subject");
         ServiceParameters params = subjToParams.values().iterator().next();
@@ -46,7 +46,7 @@ final class WebFunctionService extends SingleQueryService {
         return createServiceQuery(theBody, webFunctionValue, params);
     }
 
-    private static PlanNodeBodyServiceQuery createServiceQuery(PlanNode body, Value webFunctionValue, ServiceParameters params) {
+    private static WebFunctionServiceQuery createServiceQuery(PlanNode body, Value webFunctionValue, ServiceParameters params) {
         List<QueryTerm> args = WebFunctionVocabulary.args.getNames().stream().map(Values::iri).map(params::get).filter(l -> !l.isEmpty()).findFirst().orElse(Collections.emptyList());
         List<QueryTerm> results = WebFunctionVocabulary.result.getNames().stream().map(Values::iri).map(params::get).filter(l -> !l.isEmpty()).findFirst().get();
         return new WebFunctionServiceQuery(body, webFunctionValue, args, results);

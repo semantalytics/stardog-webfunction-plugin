@@ -79,7 +79,7 @@ public class TestCache extends AbstractStardogTest {
         }
 
         final String aQuery = queryHeader +
-                " select ?result where { bind(wf:cacheLoad(str(f:toUpper.wasm)) AS ?result) }";
+                " select ?result where { bind(wf:cacheLoad(str(f:to_upper.wasm)) AS ?result) }";
 
         try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
             aResult.stream().count();

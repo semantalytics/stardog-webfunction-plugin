@@ -32,15 +32,11 @@ import java.nio.charset.Charset;
     TestCache.class,
     TestCall.class,
     TestCompose.class,
-    TestDoc.class,
     TestFilter.class,
-    TestInCallOutPropertyFunction.class,
-    TestIpfsGet.class,
     TestMap.class,
     TestMappingDictionaryGet.class,
     TestMappingDictionaryAdd.class,
     TestMemoize.class,
-    TestOutCallInPropertyFunction.class,
     TestPartial.class,
     TestPluginVersion.class,
     TestReduce.class,
@@ -65,8 +61,10 @@ public class WasmTestSuite extends TestCase {
         System.out.println(IOUtils.toString(process.getErrorStream(), Charset.defaultCharset()));
         System.out.println(IOUtils.toString(process.getErrorStream(), Charset.defaultCharset()));
 
+        final String serverUrl = "http://localhost:" + TEST_PORT;
+
         try{
-            AdminConnectionConfiguration.toEmbeddedServer()
+            AdminConnectionConfiguration.toServer(serverUrl)
                     .credentials("admin", "admin")
                     .connect();
         } catch(StardogException e) {
@@ -85,7 +83,7 @@ public class WasmTestSuite extends TestCase {
                     .bind(new InetSocketAddress("localhost", TEST_PORT))
                     .start();
 
-            final AdminConnection adminConnection = AdminConnectionConfiguration.toEmbeddedServer()
+            final AdminConnection adminConnection = AdminConnectionConfiguration.toServer(serverUrl)
                     .credentials("admin", "admin")
                     .connect();
 

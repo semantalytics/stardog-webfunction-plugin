@@ -1,5 +1,6 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
+import com.complexible.common.base.Options;
 import com.complexible.stardog.db.ConnectableConnection;
 import com.complexible.stardog.index.dictionary.MappingDictionary;
 import com.complexible.stardog.index.statistics.Accuracy;
@@ -11,6 +12,7 @@ import com.complexible.stardog.plan.eval.service.PlanNodeBodyServiceQuery;
 import com.complexible.stardog.plan.eval.service.ServiceQuery;
 import com.complexible.stardog.plan.filter.expr.Constant;
 import com.complexible.stardog.plan.filter.expr.ValueOrError;
+import com.complexible.stardog.plan.util.QueryTermRenderer;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
@@ -92,7 +94,7 @@ public class WebFunctionServiceQuery extends PlanNodeBodyServiceQuery {
     }
 
     @Override
-    public String explain(PlanVarInfo planVarInfo) {
+    public String explain(PlanVarInfo planVarInfo, QueryTermRenderer queryTermRenderer) {
         return String.format("%s(%s) -> ?%s",
                 this.webFunctionIRI,
                 this.args.stream().map(queryTerm -> {
@@ -110,6 +112,11 @@ public class WebFunctionServiceQuery extends PlanNodeBodyServiceQuery {
                     }
                 }).collect(joining(", "))
         );
+    }
+
+    @Override
+    public String explainVerbose(PlanVarInfo planVarInfo, QueryTermRenderer queryTermRenderer) {
+        return explain(planVarInfo, queryTermRenderer);
     }
 
     @Override
@@ -148,7 +155,7 @@ public class WebFunctionServiceQuery extends PlanNodeBodyServiceQuery {
     }
 
     @Override
-    public Cardinality estimateCardinality(ConnectableConnection theConn, Costs theCosts) {
+    public Cardinality estimateCardinality(ConnectableConnection theConn, Options theOptions) {
         List<ValueOrError> argsValueOrError = args.stream().map(queryTerm -> {
             if(queryTerm.isVariable()) {
                 return ValueOrError.General.of(Values.iri(WebFunctionVocabulary.var.getImmutableName()));

@@ -23,16 +23,17 @@ import com.stardog.stark.query.impl.SelectQueryResultImpl;
 import com.stardog.stark.query.io.QueryResultFormats;
 import com.stardog.stark.query.io.QueryResultParsers;
 import com.stardog.stark.query.io.QueryResultWriters;
-import io.github.kawamuray.wasmtime.Engine;
-import io.github.kawamuray.wasmtime.Extern;
-import io.github.kawamuray.wasmtime.Func;
-import io.github.kawamuray.wasmtime.Instance;
-import io.github.kawamuray.wasmtime.Linker;
-import io.github.kawamuray.wasmtime.Memory;
-import io.github.kawamuray.wasmtime.Module;
-import io.github.kawamuray.wasmtime.Store;
-import io.github.kawamuray.wasmtime.Val;
-import io.github.kawamuray.wasmtime.WasmFunctions;
+import ai.tegmentum.webassembly4j.api.DefaultLinkingContext;
+import ai.tegmentum.webassembly4j.api.Engine;
+import ai.tegmentum.webassembly4j.api.Function;
+import ai.tegmentum.webassembly4j.api.HostFunction;
+import ai.tegmentum.webassembly4j.api.Instance;
+import ai.tegmentum.webassembly4j.api.Memory;
+import ai.tegmentum.webassembly4j.api.Module;
+import ai.tegmentum.webassembly4j.api.ValueType;
+import ai.tegmentum.webassembly4j.api.WebAssembly;
+import com.complexible.stardog.security.ActionType;
+import com.complexible.stardog.security.ShiroUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
@@ -53,8 +54,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
 import static com.stardog.stark.Values.iri;
-import static io.github.kawamuray.wasmtime.WasmValType.I32;
-import static io.github.kawamuray.wasmtime.WasmValType.I64;
 import static java.util.stream.Collectors.toList;
 
 public class StardogWasmInstance implements Closeable {
@@ -95,7 +94,8 @@ public class StardogWasmInstance implements Closeable {
         }
     }
 
-    private Store<Void> store = Store.withoutData();
+    private Engine engine;
+    private Module module;
 
     private final AtomicReference<MappingDictionary> mappingDictionaryRef = new AtomicReference<>();
     private Instance instance;
@@ -121,7 +121,7 @@ public class StardogWasmInstance implements Closeable {
     public static class WasmMemoryRef {
         public int addr;
         public int len;
-        //TODO not sure if these shoudl be int or long
+        //TODO not sure if these should be int or long
 
         public static WasmMemoryRef from(final int addr, final int len) {
             return new WasmMemoryRef(addr, len);
@@ -133,29 +133,48 @@ public class StardogWasmInstance implements Closeable {
         }
     }
 
-    private final Func mappingDictionaryGetFunc = WasmFunctions.wrap(store, I64, I32, (id) -> {
-        final Value value = this.mappingDictionaryRef.get().getValue(id);
+    private HostFunction mappingDictionaryGetHostFunction() {
+        return (Object... args) -> {
+            final long id = ((Number) args[0]).longValue();
+            final Value value = mappingDictionaryRef.get().getValue(id);
 
-        WasmMemoryRef buf = null;
-        //TODO fix this. possible NPE
-        try {
-            buf = this.writeToWasmMemory("memory", new Value[]{value});
-        } catch (IOException e) {
-            //TODO ???
-        }
+            WasmMemoryRef buf = null;
+            //TODO fix this. possible NPE
+            try {
+                buf = writeToWasmMemory("memory", new Value[]{value});
+            } catch (IOException e) {
+                //TODO ???
+            }
 
-        return buf.addr;
-    });
+            return new Object[]{buf.addr};
+        };
+    }
 
-    private final Func mappingDictionaryAddFunc = WasmFunctions.wrap(store, I32, I64, (addr) ->
-       Arrays.stream(readFromWasmMemory("memory", addr)).map(mappingDictionaryRef.get()::add).findFirst().orElse(-1L));
+    private HostFunction mappingDictionaryAddHostFunction() {
+        return (Object... args) -> {
+            final int addr = ((Number) args[0]).intValue();
+            final long result = Arrays.stream(readFromWasmMemory("memory", addr))
+                    .map(mappingDictionaryRef.get()::add)
+                    .findFirst()
+                    .orElse(-1L);
+            return new Object[]{result};
+        };
+    }
 
     public static StardogWasmInstance from(final Value wasmURL) throws ExecutionException, MalformedURLException {
-        return new StardogWasmInstance(getWasmUrl(wasmURL));
+        final URL url = getWasmUrl(wasmURL);
+        checkExecutePermission(url);
+        return new StardogWasmInstance(url);
     }
 
     public static StardogWasmInstance from(final Value wasmURL, final MappingDictionary mappingDictionary) throws ExecutionException, MalformedURLException {
-        return new StardogWasmInstance(getWasmUrl(wasmURL), mappingDictionary);
+        final URL url = getWasmUrl(wasmURL);
+        checkExecutePermission(url);
+        return new StardogWasmInstance(url, mappingDictionary);
+    }
+
+    private static void checkExecutePermission(final URL wasmUrl) {
+        ShiroUtils.require(ActionType.EXECUTE, WebFunctionResourceType.INSTANCE, wasmUrl.toString());
     }
 
     public StardogWasmInstance(final URL wasmURL, final MappingDictionary mappingDictionary) throws ExecutionException {
@@ -164,34 +183,36 @@ public class StardogWasmInstance implements Closeable {
     }
 
     public StardogWasmInstance(final URL wasmUrl) throws ExecutionException {
-        final AtomicReference<Instance> instanceRef = new AtomicReference<>();
-        try (final Engine engine = store.engine()) {
-            try (final Module module = Module.fromBinary(engine, loadingCache.get(wasmUrl))) {
-                try (Linker linker = new Linker(engine)) {
-                    linker.define("env", WASM_FUNCTION_MAPPING_DICTIONARY_ADD, Extern.fromFunc(mappingDictionaryAddFunc));
-                    linker.define("env", WASM_FUNCTION_MAPPING_DICTIONARY_GET, Extern.fromFunc(mappingDictionaryGetFunc));
-                    linker.module(store, "", module);
+        this.engine = WebAssembly.builder()
+                .provider("wasmtime")
+                .build();
 
-                    instanceRef.set(linker.instantiate(store, module));
-                }
-            }
-        }
-        this.instance = instanceRef.get();
+        this.module = engine.loadModule(loadingCache.get(wasmUrl));
+
+        final DefaultLinkingContext linkingContext = DefaultLinkingContext.builder()
+                .addHostFunction("env", WASM_FUNCTION_MAPPING_DICTIONARY_ADD,
+                        new ValueType[]{ValueType.I32}, new ValueType[]{ValueType.I64},
+                        mappingDictionaryAddHostFunction())
+                .addHostFunction("env", WASM_FUNCTION_MAPPING_DICTIONARY_GET,
+                        new ValueType[]{ValueType.I64}, new ValueType[]{ValueType.I32},
+                        mappingDictionaryGetHostFunction())
+                .build();
+
+        this.instance = module.instantiate(linkingContext);
     }
 
     private Value[] readFromWasmMemory(final String name, final int output_pointer) {
-        try (final Memory memory = instance.getMemory(store, name).get()) {
-            try (final SelectQueryResult selectQueryResult = QueryResultParsers.readSelect(new ByteArrayInputStream(readResult(memory, output_pointer).toByteArray()), QueryResultFormats.JSON)) {
-                final Optional<BindingSet> bs = selectQueryResult.stream().findFirst();
+        final Memory memory = instance.memory(name).get();
+        try (final SelectQueryResult selectQueryResult = QueryResultParsers.readSelect(new ByteArrayInputStream(readResult(memory, output_pointer).toByteArray()), QueryResultFormats.JSON)) {
+            final Optional<BindingSet> bs = selectQueryResult.stream().findFirst();
 
-                if (bs.isPresent()) {
-                    return bs.get().stream().map(Binding::value).toArray(Value[]::new);
-                } else {
-                    return new Value[0];
-                }
-            } catch (IOException e) {
+            if (bs.isPresent()) {
+                return bs.get().stream().map(Binding::value).toArray(Value[]::new);
+            } else {
                 return new Value[0];
             }
+        } catch (IOException e) {
+            return new Value[0];
         }
     }
 
@@ -210,24 +231,15 @@ public class StardogWasmInstance implements Closeable {
 
         QueryResultWriters.write(queryResult, byteArrayOutputStream, QueryResultFormats.JSON);
 
-        final Integer input_pointer;
-        try (final Func mallocFunction = instance.getFunc(store, WASM_FUNCTION_MALLOC).get()) {
-            byteArrayOutputStream.write('\0');
-            mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
-            input_pointer = mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
-        }
+        final Function mallocFunction = instance.function(WASM_FUNCTION_MALLOC).get();
+        byteArrayOutputStream.write('\0');
+        final int inputLength = byteArrayOutputStream.toByteArray().length;
+        mallocFunction.invoke(inputLength);
+        final Integer input_pointer = ((Number) mallocFunction.invoke(inputLength)).intValue();
 
-        try (final Memory memory = instance.getMemory(store, name).get()) {
-            final ByteBuffer memoryBuffer = memory.buffer(store);
-            final byte[] input = byteArrayOutputStream.toByteArray();
-            final int pages = (int) (input.length / WASM_PAGE_SIZE + 1);
-            if (pages > memory.size(store)) {
-                memory.grow(store, pages - memory.size(store));
-            }
-
-            memoryBuffer.position(input_pointer);
-            memoryBuffer.put(input);
-        }
+        final Memory memory = instance.memory(name).get();
+        final byte[] input = byteArrayOutputStream.toByteArray();
+        memory.write(input_pointer, input);
         return WasmMemoryRef.from(input_pointer, byteArrayOutputStream.toByteArray().length);
     }
 
@@ -253,24 +265,15 @@ public class StardogWasmInstance implements Closeable {
 
         QueryResultWriters.write(queryResult, byteArrayOutputStream, QueryResultFormats.JSON);
 
-        final Integer input_pointer;
-        try (final Func mallocFunction = instance.getFunc(store, WASM_FUNCTION_MALLOC).get()) {
-            byteArrayOutputStream.write('\0');
-            mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
-            input_pointer = mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
-        }
+        final Function mallocFunction = instance.function(WASM_FUNCTION_MALLOC).get();
+        byteArrayOutputStream.write('\0');
+        final int inputLength = byteArrayOutputStream.toByteArray().length;
+        mallocFunction.invoke(inputLength);
+        final Integer input_pointer = ((Number) mallocFunction.invoke(inputLength)).intValue();
 
-        try (final Memory memory = instance.getMemory(store, name).get()) {
-            final ByteBuffer memoryBuffer = memory.buffer(store);
-            final byte[] input = byteArrayOutputStream.toByteArray();
-            final int pages = (int) (input.length / WASM_PAGE_SIZE + 1);
-            if (pages > memory.size(store)) {
-                memory.grow(store, pages - memory.size(store));
-            }
-
-            memoryBuffer.position(input_pointer);
-            memoryBuffer.put(input);
-        }
+        final Memory memory = instance.memory(name).get();
+        final byte[] input = byteArrayOutputStream.toByteArray();
+        memory.write(input_pointer, input);
         return WasmMemoryRef.from(input_pointer, byteArrayOutputStream.toByteArray().length);
     }
 
@@ -292,29 +295,21 @@ public class StardogWasmInstance implements Closeable {
 
         QueryResultWriters.write(queryResult, byteArrayOutputStream, QueryResultFormats.JSON);
 
-        final Integer input_pointer;
-        try (final Func mallocFunction = instance.getFunc(store, WASM_FUNCTION_MALLOC).get()) {
-            byteArrayOutputStream.write('\0');
-            mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
-            input_pointer = mallocFunction.call(store, Val.fromI32(byteArrayOutputStream.toByteArray().length))[0].i32();
-        }
+        final Function mallocFunction = instance.function(WASM_FUNCTION_MALLOC).get();
+        byteArrayOutputStream.write('\0');
+        final int inputLength = byteArrayOutputStream.toByteArray().length;
+        mallocFunction.invoke(inputLength);
+        final Integer input_pointer = ((Number) mallocFunction.invoke(inputLength)).intValue();
 
-        try (final Memory memory = instance.getMemory(store, name).get()) {
-            final ByteBuffer memoryBuffer = memory.buffer(store);
-            final byte[] input = byteArrayOutputStream.toByteArray();
-            final int pages = (int) (input.length / WASM_PAGE_SIZE + 1);
-            if (pages > memory.size(store)) {
-                memory.grow(store, pages - memory.size(store));
-            }
-
-            memoryBuffer.position(input_pointer);
-            memoryBuffer.put(input);
-        }
+        final Memory memory = instance.memory(name).get();
+        final byte[] input = byteArrayOutputStream.toByteArray();
+        memory.write(input_pointer, input);
         return WasmMemoryRef.from(input_pointer, byteArrayOutputStream.toByteArray().length);
     }
 
     private SelectQueryResult readFromWasmMemorySelectQueryResult(final String name, final int output_pointer) {
-        try (final Memory memory = instance.getMemory(store, name).get()) {
+        final Memory memory = instance.memory(name).get();
+        try {
             return QueryResultParsers.readSelect(new ByteArrayInputStream(readResult(memory, output_pointer).toByteArray()), QueryResultFormats.JSON);
         } catch (IOException e) {
             throw new StardogException(e);
@@ -322,9 +317,8 @@ public class StardogWasmInstance implements Closeable {
     }
 
     public void free(final WasmMemoryRef wasmMemoryRef) {
-        try (final Func freeFunction = instance.getFunc(store, WASM_FUNCTION_FREE).get();) {
-            freeFunction.call(store, Val.fromI32(wasmMemoryRef.addr), Val.fromI32(wasmMemoryRef.len));
-        }
+        final Function freeFunction = instance.function(WASM_FUNCTION_FREE).get();
+        freeFunction.invoke(wasmMemoryRef.addr, wasmMemoryRef.len);
     }
 
     public boolean isClosed() {
@@ -332,10 +326,15 @@ public class StardogWasmInstance implements Closeable {
     }
 
     public void close() {
-        instance.close();
-        store.close();
+        if (module != null) {
+            module.close();
+        }
+        if (engine != null) {
+            engine.close();
+        }
         instance = null;
-        store = null;
+        module = null;
+        engine = null;
         closed = true;
     }
 
@@ -343,16 +342,15 @@ public class StardogWasmInstance implements Closeable {
         try {
             final WasmMemoryRef input = this.writeToWasmMemoryWithCardinality("memory", inputCardinality, args.toArray(new Value[0]));
 
-            try (final Func evaluateFunction = instance.getFunc(store, WASM_FUNCTION_CARDINALITY_ESTIMATE).get()) {
-                final Integer output_pointer = evaluateFunction.call(store, Val.fromI32(input.addr))[0].i32();
-                free(input);
-                try (final SelectQueryResult selectQueryResult = readFromWasmMemorySelectQueryResult("memory", output_pointer)) {
-                    if (selectQueryResult.hasNext()) {
-                        final BindingSet bs = selectQueryResult.next();
-                        return Cardinality.of(Literal.longValue((Literal) bs.get("cardinality")), Accuracy.valueOf(((Literal) bs.get("accuracy")).label()));
-                    } else {
-                        throw new PlanException("Unable to retrieve cardinality estimate");
-                    }
+            final Function evaluateFunction = instance.function(WASM_FUNCTION_CARDINALITY_ESTIMATE).get();
+            final Integer output_pointer = ((Number) evaluateFunction.invoke(input.addr)).intValue();
+            free(input);
+            try (final SelectQueryResult selectQueryResult = readFromWasmMemorySelectQueryResult("memory", output_pointer)) {
+                if (selectQueryResult.hasNext()) {
+                    final BindingSet bs = selectQueryResult.next();
+                    return Cardinality.of(Literal.longValue((Literal) bs.get("cardinality")), Accuracy.valueOf(((Literal) bs.get("accuracy")).label()));
+                } else {
+                    throw new PlanException("Unable to retrieve cardinality estimate");
                 }
             }
         } catch (IOException e1) {
@@ -364,41 +362,37 @@ public class StardogWasmInstance implements Closeable {
 
         final WasmMemoryRef input = writeToWasmMemory("memory", values);
 
-        try (final Func evaluateFunction = instance.getFunc(store, WASM_FUNCTION_EVALUATE).get()) {
-            final Integer output_pointer = evaluateFunction.call(store, Val.fromI32(input.addr))[0].i32();
-            free(input);
-            return readFromWasmMemorySelectQueryResult("memory", output_pointer);
-        }
+        final Function evaluateFunction = instance.function(WASM_FUNCTION_EVALUATE).get();
+        final Integer output_pointer = ((Number) evaluateFunction.invoke(input.addr)).intValue();
+        free(input);
+        return readFromWasmMemorySelectQueryResult("memory", output_pointer);
     }
 
     public SelectQueryResult doc() throws IOException {
 
-        try (Func evaluateFunction = instance.getFunc(store, WASM_FUNCTION_DOC).get()) {
-            final Integer output_pointer = evaluateFunction.call(store)[0].i32();
-            return readFromWasmMemorySelectQueryResult("memory", output_pointer);
-        }
+        final Function evaluateFunction = instance.function(WASM_FUNCTION_DOC).get();
+        final Integer output_pointer = ((Number) evaluateFunction.invoke()).intValue();
+        return readFromWasmMemorySelectQueryResult("memory", output_pointer);
     }
 
     public SelectQueryResult compute(final Value[] values, long multiplicity) throws IOException {
         final WasmMemoryRef input = writeToWasmMemoryWithMultiplicity("memory", Arrays.stream(values).toArray(Value[]::new), multiplicity);
 
-        try (final Func evaluateFunction = instance.getFunc(store, WASM_FUNCTION_AGGREGATE).get()) {
-            final Integer output_pointer = evaluateFunction.call(store, Val.fromI32(input.addr))[0].i32();
-            free(input);
-            return readFromWasmMemorySelectQueryResult("memory", output_pointer);
-        }
+        final Function evaluateFunction = instance.function(WASM_FUNCTION_AGGREGATE).get();
+        final Integer output_pointer = ((Number) evaluateFunction.invoke(input.addr)).intValue();
+        free(input);
+        return readFromWasmMemorySelectQueryResult("memory", output_pointer);
     }
 
     public SelectQueryResult aggregateGetValue() {
-        try (final Func evaluateFunction = instance.getFunc(store, WASM_FUNCTION_GET_VALUE).get()) {
-            final Integer output_pointer = evaluateFunction.call(store)[0].i32();
-            return readFromWasmMemorySelectQueryResult("memory", output_pointer);
-        }
+        final Function evaluateFunction = instance.function(WASM_FUNCTION_GET_VALUE).get();
+        final Integer output_pointer = ((Number) evaluateFunction.invoke()).intValue();
+        return readFromWasmMemorySelectQueryResult("memory", output_pointer);
     }
 
     private ByteArrayOutputStream readResult(final Memory memory, final Integer output_pointer) {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final ByteBuffer memoryBuffer = memory.buffer(store);
+        final ByteBuffer memoryBuffer = memory.asByteBuffer();
 
         for (Integer i = output_pointer, max = memoryBuffer.limit(); i < max; ++i) {
             final byte[] b = new byte[1];

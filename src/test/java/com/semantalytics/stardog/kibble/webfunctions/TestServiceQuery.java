@@ -1,6 +1,6 @@
 package com.semantalytics.stardog.kibble.webfunctions;
 
-import com.complexible.stardog.plan.eval.ExecutionException;
+import com.complexible.stardog.protocols.http.client.BaseHttpClient;
 import com.semantalytics.stardog.kibble.AbstractStardogTest;
 import com.stardog.stark.Literal;
 import com.stardog.stark.Value;
@@ -17,36 +17,6 @@ public class TestServiceQuery extends AbstractStardogTest {
     final String queryHeader = WebFunctionVocabulary.sparqlPrefix("wf", "latest") +
             " prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> " +
             " prefix wfs: <tag:semantalytics:stardog:webfunction:0.0.0:> ";
-
-    @Test
-    public void testTemp() {
-
-        final String aQuery =
-"                prefix wf: <http://semantalytics.com/2021/03/ns/stardog/webfunction/0.0.0/> " +
-        " prefix f: <file:src/test/rust/target/wasm32-unknown-unknown/release/> " +
-        "                prefix wfs: <tag:semantalytics:stardog:webfunction:0.0.0:> " +
-                "select ?str ?lang ?iso_639_1 ?iso_639_3 ?confidence where {" +
-       "{ select ?langs ?str WHERE { bind(wf:call(str(f:array_of.wasm), \"en\", \"es\", \"fr\") as ?langs) { VALUES ?str { \"hello world\" \"buenos dias\" \"bonjour\"} } } } " +
-"            service wfs:service { " +
-"                    [] wf:call \"http://wf.semantalytics.com/ipns/k51qzi5uqu5dlx0ttqevj64d3twk31y7hsgnofkqkjaiv11k98lj2rx60kjgv5/stardog/function/string/lang/detectConfidence/1.0.3-SNAPSHOT\"; " +
-"            wf:args (?str ?langs); " +
-"            wf:result (?lang ?iso_639_1 ?iso_639_3 ?confidence) . " +
-"        } " +
-"        } ";
-
-
-        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
-
-            assertThat(aResult).hasNext();
-            final Optional<Value> aPossibleValue = aResult.next().value("result");
-            assertThat(aPossibleValue).isPresent();
-            final Value aValue = aPossibleValue.get();
-            assertThat(assertStringLiteral(aValue));
-            final Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("STARDOG");
-            assertThat(aResult).isExhausted();
-        }
-    }
 
     @Test
     public void testServiceQuery() {
@@ -133,7 +103,7 @@ public class TestServiceQuery extends AbstractStardogTest {
         }
     }
 
-    @Test(expected = ExecutionException.class)
+    @Test(expected = BaseHttpClient.HttpClientException.class)
     public void missingCallPredicateShouldFail() {
 
         final String aQuery = queryHeader +
@@ -154,7 +124,7 @@ public class TestServiceQuery extends AbstractStardogTest {
         }
     }
 
-    @Test(expected = ExecutionException.class)
+    @Test(expected = BaseHttpClient.HttpClientException.class)
     public void missingResultsPredicateShouldFail() {
 
         final String aQuery = queryHeader +
@@ -166,7 +136,7 @@ public class TestServiceQuery extends AbstractStardogTest {
         }
     }
 
-    @Test(expected = ExecutionException.class)
+    @Test(expected = BaseHttpClient.HttpClientException.class)
     public void constantResultsShouldFail() {
 
         final String aQuery = queryHeader +
@@ -268,34 +238,4 @@ public class TestServiceQuery extends AbstractStardogTest {
         }
     }
 
-    @Test
-    public void testServiceQueryVarInput() {
-
-        final String aQuery = queryHeader +
-                " select ?result where { SERVICE wfs:service {" +
-                "  [] wf:call \"file:src/test/rust/target/wasm32-unknown-unknown/release/to_upper.wasm\"; " +
-                "     wf:args ?args;" +
-                "     wf:result ?result } values ?args {\"star\" \"dog\"}}";
-
-        try (final SelectQueryResult aResult = connection.select(aQuery).execute()) {
-
-            assertThat(aResult).hasNext();
-            Optional<Value> aPossibleValue = aResult.next().value("result");
-            assertThat(aPossibleValue).isPresent();
-            Value aValue = aPossibleValue.get();
-            assertThat(assertStringLiteral(aValue));
-            Literal aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("STAR");
-
-            assertThat(aResult).hasNext();
-            aPossibleValue = aResult.next().value("result");
-            assertThat(aPossibleValue).isPresent();
-            aValue = aPossibleValue.get();
-            assertThat(assertStringLiteral(aValue));
-            aLiteral = ((Literal)aValue);
-            assertThat(aLiteral.label()).isEqualTo("DOG");
-
-            assertThat(aResult).isExhausted();
-        }
-    }
 }

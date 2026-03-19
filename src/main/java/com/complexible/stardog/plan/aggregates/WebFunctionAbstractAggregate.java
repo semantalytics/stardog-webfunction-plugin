@@ -18,4 +18,9 @@ public abstract class WebFunctionAbstractAggregate extends AbstractAggregate imp
     public WebFunctionAbstractAggregate(AbstractAggregate theAggregate) {
         super(theAggregate);
     }
+
+    @Override
+    public Aggregate.ErrorBehaviour getErrorBehaviour() {
+        return Aggregate.ErrorBehaviour.MayRaise;
+    }
 }
